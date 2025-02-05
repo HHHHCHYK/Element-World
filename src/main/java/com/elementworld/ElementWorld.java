@@ -1,7 +1,10 @@
 package com.elementworld;
 
+import com.elementworld.command.CommandsRegister;
+import com.elementworld.command.Hello;
 import net.fabricmc.api.ModInitializer;
 
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,5 +23,14 @@ public class ElementWorld implements ModInitializer {
 		// Proceed with mild caution.
 
 		LOGGER.info("Hello Fabric world!");
+
+
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+			/*
+			   将命令注册到命令分发器
+			 */
+			Hello.register(dispatcher);
+			CommandsRegister.register(dispatcher);
+		});
 	}
 }
