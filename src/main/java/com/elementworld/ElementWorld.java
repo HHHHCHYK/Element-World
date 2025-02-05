@@ -25,6 +25,9 @@ public class ElementWorld implements ModInitializer {
 		LOGGER.info("Hello Fabric world!");
 
 
+		/*
+		下面是进行将命令注册到命令分发器的操作，与注册命令的操作区分（消歧义）
+		 */
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			/*
 			   将命令注册到命令分发器

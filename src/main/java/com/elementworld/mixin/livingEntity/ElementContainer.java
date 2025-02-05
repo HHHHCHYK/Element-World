@@ -1,4 +1,4 @@
-package com.elementworld;
+package com.elementworld.mixin.livingEntity;
 
 import com.elementworld.elements.*;
 import net.minecraft.entity.LivingEntity;

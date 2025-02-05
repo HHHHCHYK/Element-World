@@ -8,6 +8,7 @@ public class Element {
         Anemo,Cryo,Dendro,Electro,Frozen,Geo,Hydro,Pyro
     }
 
+
     protected double gauge;
     protected double decaySpeed;
 
@@ -38,7 +39,6 @@ public class Element {
     public void setGauge(double gauge){
         this.gauge = gauge;
     }
-
 
 
 }

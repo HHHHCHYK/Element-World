@@ -1,4 +1,4 @@
-package com.elementworld.mixin;
+package com.elementworld.mixin.livingEntity;
 
 import net.minecraft.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
