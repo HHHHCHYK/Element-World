@@ -1,5 +1,7 @@
 package com.elementworld.command;
 
+import com.elementworld.ElementContainer;
+import com.elementworld.command.ArgumentTypes.ElementTypeArgumentType;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -8,6 +10,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -25,24 +28,33 @@ public class CommandsRegister {
     }
 
     /*
-        这个命令用于对实体的元素附着进行操作
+        这个命令(Command)用于对实体的元素附着进行操作
     */
     private static LiteralArgumentBuilder<ServerCommandSource> elementCommandBuild(){
         RequiredArgumentBuilder<ServerCommandSource, EntitySelector> addBuild = CommandManager
                 .argument("target", EntityArgumentType.entity())
-                .then(CommandManager.argument("ElementType",StringArgumentType.word()));
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                .executes(commandContext -> {
+                    commandContext.getSource().sendMessage(Text.literal("Sc1"));
+                    return Command.SINGLE_SUCCESS;
+                });
 
         return (LiteralArgumentBuilder<ServerCommandSource>) CommandManager.literal("element")
                 .requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))
-                .then(CommandManager.argument("method", StringArgumentType.word())
-                        .executes(commandContext -> {
-                            String string = StringArgumentType.getString(commandContext,"method");
-                            if(string.equals("add")){
+                .then(CommandManager.argument("method", StringArgumentType.word()))
+                .executes(commandContext -> {
+                    String method = StringArgumentType.getString(commandContext,"method");
 
-                            }
-                            return Command.SINGLE_SUCCESS;
-                        }));
+                    if(method.equals("list")){
+                        CommandManager.argument("target",EntityArgumentType.entity())
+                                .executes(commandContext1 -> {
+                                    Entity target = EntityArgumentType.getEntity(commandContext1,"target");
+                                    if(target instanceof LivingEntity){
+                                        ElementContainer container = target.
+                                    }
+                                })
+
+                    }
+                });
     }
 
 }

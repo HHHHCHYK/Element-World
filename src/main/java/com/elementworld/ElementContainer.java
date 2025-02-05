@@ -1,4 +1,4 @@
-package com.elementworld.mixin.livingEntity;
+package com.elementworld;
 
 import com.elementworld.elements.*;
 import net.minecraft.entity.LivingEntity;
@@ -6,6 +6,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Objects;
 
 public class ElementContainer {
@@ -20,7 +21,8 @@ public class ElementContainer {
     /*
         下面处理产生元素附着的情况
      */
-    public void applicationElement(Element element){
+    public void applicationElement(Element element,LivingEntity source){
+
         if(elements.isEmpty()){//集合为空
             addElement(element);
 
@@ -79,6 +81,12 @@ public class ElementContainer {
     }
 
     public void tick(){
+        /*
+        下面运行每个附着元素的tick方法
+         */
+        for(Element element : elements){
+            element.tick();
+        }
 
     }
 

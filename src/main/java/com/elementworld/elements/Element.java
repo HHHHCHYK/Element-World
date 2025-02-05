@@ -8,6 +8,8 @@ public class Element {
         Anemo,Cryo,Dendro,Electro,Frozen,Geo,Hydro,Pyro
     }
 
+    private LivingEntity source;
+    private LivingEntity owner;
 
     protected double gauge;
     protected double decaySpeed;
@@ -20,10 +22,14 @@ public class Element {
     /*
     这里实现元素衰减或者其他每个游戏刻都会执行的内容
      */
-    public void tick(LivingEntity entity){
+    public void tick(){
         gauge -= decaySpeed;
     }
 
+
+    /*
+    以下是getter&setter
+     */
     public double getGauge(){
         return gauge;
     }
@@ -40,6 +46,20 @@ public class Element {
         this.gauge = gauge;
     }
 
+    public void setSource(LivingEntity source){
+        this.source = source;
+    }
 
+    public void setOwner(LivingEntity owner){
+        this.owner = owner;
+    }
+
+    public LivingEntity getOwner(){
+        return owner;
+    }
+
+    public LivingEntity getSource(){
+        return source;
+    }
 }
 
