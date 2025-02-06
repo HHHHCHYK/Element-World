@@ -4,4 +4,8 @@ public class Electro extends Element{
     public Electro(double gauge) {
         super(gauge);
     }
+
+    public String toString() {
+        return "Electro";
+    }
 }

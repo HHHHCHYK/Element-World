@@ -1,7 +1,8 @@
 package com.elementworld;
 
-import com.elementworld.command.CommandsRegister;
+import com.elementworld.command.Commands;
 import com.elementworld.command.Hello;
+import com.elementworld.registers.ArgumentType;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -24,6 +25,7 @@ public class ElementWorld implements ModInitializer {
 
 		LOGGER.info("Hello Fabric world!");
 
+		ArgumentType.register();
 
 		/*
 		下面是进行将命令注册到命令分发器的操作，与注册命令的操作区分（消歧义）
@@ -33,7 +35,7 @@ public class ElementWorld implements ModInitializer {
 			   将命令注册到命令分发器
 			 */
 			Hello.register(dispatcher);
-			CommandsRegister.register(dispatcher);
+			Commands.register(dispatcher);
 		});
 	}
 }

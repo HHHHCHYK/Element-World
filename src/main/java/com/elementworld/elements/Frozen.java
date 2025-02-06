@@ -4,9 +4,12 @@ import net.minecraft.entity.LivingEntity;
 
 public class Frozen extends Element{
 
-    public Frozen(double gauge, LivingEntity target) {
+    public Frozen(double gauge){
         super(gauge);
-        this.gauge = gauge;
         decaySpeed = Math.sqrt(5*gauge+4)*2-4;
+    }
+
+    public String toString() {
+        return "Frozen";
     }
 }

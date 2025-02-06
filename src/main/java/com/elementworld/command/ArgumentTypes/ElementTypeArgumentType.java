@@ -7,11 +7,11 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import jdk.jshell.SourceCodeAnalysis;
+import net.minecraft.server.command.ServerCommandSource;
 
 import java.util.concurrent.CompletableFuture;
 
-public class ElementTypeArgumentType implements ArgumentType<Element.Elements> {
+public class ElementTypeArgumentType implements ArgumentType<String> {
 
     /*
     创建单例
@@ -20,13 +20,18 @@ public class ElementTypeArgumentType implements ArgumentType<Element.Elements> {
         return new ElementTypeArgumentType();
     }
 
+    public static Element.ElementType getElement(CommandContext<ServerCommandSource> context, String name){
+        return Element.ElementType.valueOf(context.getArgument(name,String.class));
+    }
+
     /*
     判断是否匹配
+        parse：是否符合语法
      */
     @Override
-    public Element.Elements parse(StringReader stringReader) throws CommandSyntaxException {
+    public String parse(StringReader stringReader) throws CommandSyntaxException {
         String input = stringReader.readUnquotedString();
-        return Element.Elements.valueOf(input.toUpperCase());
+        return Element.ElementType.valueOf(input.toUpperCase()).toString();
     }
 
     /*
@@ -34,7 +39,7 @@ public class ElementTypeArgumentType implements ArgumentType<Element.Elements> {
      */
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder){
-        for(Element.Elements type : Element.Elements.values()){
+        for(Element.ElementType type : Element.ElementType.values()){
             if(type.name().toLowerCase().startsWith(builder.getRemainingLowerCase())){
                 builder.suggest(type.name().toLowerCase());
             }

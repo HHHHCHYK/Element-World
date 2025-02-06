@@ -4,13 +4,16 @@ package com.elementworld.elements;
 import net.minecraft.entity.LivingEntity;
 
 public class Element {
-    public static enum Elements{
-        Anemo,Cryo,Dendro,Electro,Frozen,Geo,Hydro,Pyro
+
+    public static enum ElementType {
+        ANEMO,CRYO,DENDRO,ELECTRO,FROZEN,GEO,HYDRO,PYRO
     }
 
+    //拥有者和施加者
     private LivingEntity source;
     private LivingEntity owner;
 
+    //元素量和衰减速度
     protected double gauge;
     protected double decaySpeed;
 
@@ -24,6 +27,43 @@ public class Element {
      */
     public void tick(){
         gauge -= decaySpeed;
+    }
+
+    /*
+    下面是一些功能函数
+     */
+
+    //创建一个元素实例
+    public static Element create(ElementType elementType, double gauge){
+        switch (elementType){
+            case GEO -> {
+                return new Geo(gauge);
+            }
+            case CRYO -> {
+                return new Cryo(gauge);
+            }
+            case PYRO -> {
+                return new Pyro(gauge);
+            }
+            case ANEMO -> {
+                return new Anemo(gauge);
+            }
+            case HYDRO -> {
+                return new Hydro(gauge);
+            }
+            case DENDRO -> {
+                return new Dendro(gauge);
+            }
+            case FROZEN -> {
+                return new Frozen(gauge);
+            }
+            case ELECTRO -> {
+                return new Electro(gauge);
+            }
+            default -> {
+                return null;
+            }
+        }
     }
 
 
