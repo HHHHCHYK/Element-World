@@ -79,8 +79,6 @@ public class ElementContainer {
             检查容器中是否有超过两种元素，如果有，检查元素类别
          */
 
-        if(elements.size() == 2){
-        }
     }
 
     /*
