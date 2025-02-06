@@ -11,59 +11,75 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class ElementContainer {
-    private final ArrayList<Element> elements = new ArrayList<Element>();
+    private final HashSet<Element> elements = new HashSet<Element>();
     private final LivingEntity owner;
 
     //!Debug!
-    private boolean debugMode = false;
+    @SuppressWarnings("FieldCanBeLocal")
+    private final boolean debugMode = true;
 
+    //正常生存可以调整的模式
     public boolean displayElement = false;
 
-    private int ElectroChargedCD = 0;
+    //owner的各类属性
+    public int mastery;
+
+    //CD类别成员
+    private int electroChargedCD = 0;
+    private int combustionCD = 0;
 
     public ElementContainer(LivingEntity owner){
-
         this.owner = owner;
     }
 
     public void tick(){
 
         //使得overloadCD流动
-        if(ElectroChargedCD >0){
-            ElectroChargedCD--;
+        if(electroChargedCD >0){
+            electroChargedCD--;
         }
 
+        Vector<Element> deadElements = new Vector<Element>();
         for (Element element : elements) {
             /*
             下面运行每个附着元素的tick方法
              */
             element.tick();
             /*
-            移除元素量小于等于零的元素
+            元素量小于等于零的元素标记为需要移除
              */
             if(element.getGauge()<=0){
-                removeElement(element);
+                deadElements.add(element);
             }
         }
 
-        if(owner instanceof PlayerEntity player && debugMode){
+        //统一移除被标记的元素
+        for(Element element : deadElements){
+            removeElement(element);
+        }
 
-            player.sendMessage(Text.literal("Debug!Has element:"),true);
-            if(elements.isEmpty()){
-                player.sendMessage(Text.literal("Null"),true);
-            }
-            else{
-                boolean flag = true;
-                for(Element element : elements){
-                    if(flag){
-                        flag = false;
-                        player.sendMessage(Text.literal(element.toString()));
-                    }
-                    else {
-                        player.sendMessage(Text.literal(","+element.toString()));
-                    }
+        //Debug模式：显示玩家目前所拥有的元素
+        if(owner instanceof PlayerEntity player && debugMode){
+            boolean flag = true;
+            for(Element element : elements){
+                String gauge = String.format("%.2f",element.getGauge());
+                if(flag){
+                    flag = false;
+                    player.sendMessage(Text.literal(element.toString() + gauge),true);
+                    continue;
+                }
+                else {
+                    player.sendMessage(Text.literal(" , " + element.toString() + gauge),true);
                 }
             }
+        }
+
+        /*
+        感电&超载反应实现：
+            检查容器中是否有超过两种元素，如果有，检查元素类别
+         */
+
+        if(elements.size() == 2){
         }
     }
 
@@ -87,40 +103,50 @@ public class ElementContainer {
         如果只有一个元素被附着
          */
         else if (elements.size() == 1) {
-            Element beReactionElement = elements.iterator().next();
+            Element bRElement = elements.iterator().next();
 
             double gauge = element.getGauge();//后手元素元素量
-            double beGauge = beReactionElement.getGauge();//附着元素元素量
+            double beGauge = bRElement.getGauge();//附着元素元素量
 
-            if (beReactionElement.getClass() == element.getClass()) {
-                beReactionElement.setGauge(Math.max(gauge, beGauge));
+            if (bRElement.getClass() == element.getClass()) {
+                bRElement.setGauge(Math.max(gauge, beGauge));
             }
 
             //如若被添加元素为水元素
             if (element instanceof Hydro) {
-
-
-                if (beReactionElement instanceof Pyro) {//火
-                    beReactionElement.subGauge(gauge * 2);
-                } else if (beReactionElement instanceof Cryo) {//冰！
+                if (bRElement instanceof Pyro) {//火
+                    bRElement.subGauge(gauge * 2);
+                } else if (bRElement instanceof Cryo) {//冰！
+                    //此处生成冻元素
                     elements.add(new Frozen(Math.min(gauge, beGauge) * 2));
-                    beReactionElement.subGauge(gauge);
-                } else if (beReactionElement instanceof Element) {//雷
+                    bRElement.subGauge(gauge);
+                }
+                else if(bRElement instanceof Frozen){//冻
                     addElement(element);
-                } else if (beReactionElement instanceof Dendro) {//草
-                    beReactionElement.subGauge(gauge);
-                } else {
-                    System.out.println("[Warning] Wrong element be applied!");
+                }
+                else if (bRElement instanceof Element) {//雷
+                    addElement(element);
+                    /*
+                    感电反应相关逻辑写在tick()
+                     */
+                }
+                else if (bRElement instanceof Dendro) {//草
+                    /*
+                    这里缺少草反应相关逻辑（还没想好草反应怎么写）
+                     */
+                    bRElement.subGauge(gauge);
+                }
+                else {
+                    System.out.println("[Warning] ElementApplied Error!");
                 }
             }
 
             //如若添加的元素为火
             if (element instanceof Pyro) {
-                if (beReactionElement instanceof Hydro) {//水
-                    beReactionElement.subGauge(gauge * 0.5);
-                } else if (beReactionElement instanceof Electro) {//雷
-                    beReactionElement.subGauge(gauge);
-
+                if (bRElement instanceof Hydro) {//水
+                    bRElement.subGauge(gauge * 0.5);
+                } else if (bRElement instanceof Electro) {//雷
+                    bRElement.subGauge(gauge);
                 /*
                 下面实现超载：
                 超载反应特征：爆炸并且造成伤害
@@ -130,6 +156,21 @@ public class ElementContainer {
                     Vec3d playerPos = owner.getPos();
                     Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
                             .createExplosion(owner, playerPos.x, playerPos.y, playerPos.z, 3, World.ExplosionSourceType.BLOCK);
+                }
+                else if(bRElement instanceof Cryo){//冰！！
+                    bRElement.subGauge(gauge*2);
+                }
+                else if(bRElement instanceof Frozen){
+                    bRElement.subGauge(gauge*2);
+                }
+                else if(bRElement instanceof Dendro){//草
+                    addElement(element);
+                    /*
+                    燃烧反应的逻辑在tick()
+                     */
+                }
+                else{
+                    System.out.println("[Warning] ElementApplied Error!");
                 }
             }
         }
@@ -141,11 +182,13 @@ public class ElementContainer {
     /*
     private方法
      */
+    //这个是带有损耗的元素附着模式
     private void addElement(Element element){
         element.setGauge(element.getGauge()*0.8);//元素附着损耗
         elements.add(element);
     }
 
+    //移除对应元素
     private void removeElement(Element element){
         elements.remove(element);
     }

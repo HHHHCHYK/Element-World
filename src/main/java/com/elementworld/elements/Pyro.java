@@ -5,6 +5,8 @@ public class Pyro extends Element{
         super(gauge);
     }
 
+
+    @Override
     public String toString() {
         return "Pyro";
     }

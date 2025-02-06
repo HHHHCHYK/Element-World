@@ -66,7 +66,6 @@ public class Element {
         }
     }
 
-
     /*
     以下是getter&setter
      */

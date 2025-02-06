@@ -5,6 +5,8 @@ public class Dendro extends Element{
         super(gauge);
     }
 
+
+    @Override
     public String toString() {
         return "Dendro";
     }

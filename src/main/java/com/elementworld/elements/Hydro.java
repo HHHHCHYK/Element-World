@@ -5,6 +5,8 @@ public class Hydro extends Element{
         super(gauge);
     }
 
+
+    @Override
     public String toString() {
         return "Hydro";
     }

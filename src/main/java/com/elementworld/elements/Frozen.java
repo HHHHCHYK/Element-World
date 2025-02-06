@@ -9,6 +9,7 @@ public class Frozen extends Element{
         decaySpeed = Math.sqrt(5*gauge+4)*2-4;
     }
 
+    @Override
     public String toString() {
         return "Frozen";
     }

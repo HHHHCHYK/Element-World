@@ -5,6 +5,8 @@ public class Geo extends Element{
         super(gauge);
     }
 
+
+    @Override
     public String toString() {
         return "Geo";
     }

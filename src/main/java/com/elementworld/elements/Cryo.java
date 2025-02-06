@@ -5,6 +5,8 @@ public class Cryo extends Element{
         super(gauge);
     }
 
+
+    @Override
     public String toString() {
         return "Cryo";
     }

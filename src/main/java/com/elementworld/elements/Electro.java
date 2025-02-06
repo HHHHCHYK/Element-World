@@ -5,6 +5,8 @@ public class Electro extends Element{
         super(gauge);
     }
 
+
+    @Override
     public String toString() {
         return "Electro";
     }

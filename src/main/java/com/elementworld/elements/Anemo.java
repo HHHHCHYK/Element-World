@@ -5,6 +5,7 @@ public class Anemo extends Element{
         super(gauge);
     }
 
+    @Override
     public String toString() {
         return "Anemo";
     }

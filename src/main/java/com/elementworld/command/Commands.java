@@ -70,7 +70,10 @@ public class Commands {
                                                         Element.ElementType element = ElementTypeArgumentType.getElement(commandContext,"ElementType");
                                                         ElementContainer container = ((LivingEntityHolder)((LivingEntityHolder) entity)).elementWorld$getElementContainer();
 
-                                                        container.applyElement(Objects.requireNonNull(Element.create(element, DoubleArgumentType.getDouble(commandContext, "gauge"))),
+                                                        container.applyElement(
+                                                                Objects.requireNonNull(
+                                                                        Element.create(element,
+                                                                                DoubleArgumentType.getDouble(commandContext, "gauge"))),
                                                                 null);
                                                         scs.sendMessage(Text.literal("成功添加"+element.toString()));
                                                     }
