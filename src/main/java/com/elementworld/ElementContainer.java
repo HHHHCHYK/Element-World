@@ -28,6 +28,9 @@ public class ElementContainer {
     private int electroChargedCD = 0;
     private int combustionCD = 0;
 
+    //辅助数据结构
+    private HashMap<Class<? extends Element>,Boolean> hasElement;//此处使用懒加载节省空间
+
     public ElementContainer(LivingEntity owner){
         this.owner = owner;
     }
@@ -75,10 +78,24 @@ public class ElementContainer {
         }
 
         /*
-        感电&超载反应实现：
+        感电&燃烧反应实现：
             检查容器中是否有超过两种元素，如果有，检查元素类别
          */
+        if(elements.size() == 2){
+            //懒加载这个映射
+            if(hasElement == null){hasElement = new HashMap<>();}
 
+            //将其中元素的状态更新
+            for(Element element : elements){
+                hasElement.put(element.getClass(),true);
+            }
+
+            if(has(Pyro.class) && has(Dendro.class)){//燃烧
+
+            } else if (has(Hydro.class) && has(Electro.class)) {//感电
+
+            }
+        }
     }
 
     /*
@@ -176,7 +193,6 @@ public class ElementContainer {
 
 
 
-
     /*
     private方法
      */
@@ -198,6 +214,12 @@ public class ElementContainer {
         return elements.isEmpty();
     }
 
+    public boolean has(Class<? extends Element> c){
+        if (hasElement.get(c) == null){
+            return false;
+        }
+        return hasElement.get(c);
+    }
 
     /*
     以下为getter&setter

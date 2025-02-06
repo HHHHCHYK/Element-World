@@ -9,6 +9,15 @@ public class Element {
         ANEMO,CRYO,DENDRO,ELECTRO,FROZEN,GEO,HYDRO,PYRO
     }
 
+    public static final Anemo ANEMO = (Anemo) Element.create(ElementType.ANEMO,0);
+    public static final Cryo CRYO = (Cryo) Element.create(ElementType.CRYO,0);
+    public static final Dendro DENDRO = (Dendro) Element.create(ElementType.DENDRO,0);
+    public static final Electro ELECTRO = (Electro) Element.create(ElementType.ELECTRO,0);
+    public static final Frozen FROZEN = (Frozen) Element.create(ElementType.FROZEN,0);
+    public static final Geo GEO = (Geo) Element.create(ElementType.GEO,0);
+    public static final Hydro HYDRO = (Hydro) Element.create(ElementType.HYDRO,0);
+    public static final Pyro PYRO = (Pyro) Element.create(ElementType.PYRO,0);
+
     //拥有者和施加者
     private LivingEntity source;
     private LivingEntity owner;
