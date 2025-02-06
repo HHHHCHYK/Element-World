@@ -2,6 +2,7 @@ package com.elementworld;
 
 import com.elementworld.elements.*;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -13,12 +14,57 @@ public class ElementContainer {
     private final ArrayList<Element> elements = new ArrayList<Element>();
     private final LivingEntity owner;
 
+    //!Debug!
+    private boolean debugMode = false;
+
     public boolean displayElement = false;
-    private int update = 0;
+
+    private int ElectroChargedCD = 0;
 
     public ElementContainer(LivingEntity owner){
 
         this.owner = owner;
+    }
+
+    public void tick(){
+
+        //使得overloadCD流动
+        if(ElectroChargedCD >0){
+            ElectroChargedCD--;
+        }
+
+        for (Element element : elements) {
+            /*
+            下面运行每个附着元素的tick方法
+             */
+            element.tick();
+            /*
+            移除元素量小于等于零的元素
+             */
+            if(element.getGauge()<=0){
+                removeElement(element);
+            }
+        }
+
+        if(owner instanceof PlayerEntity player && debugMode){
+
+            player.sendMessage(Text.literal("Debug!Has element:"),true);
+            if(elements.isEmpty()){
+                player.sendMessage(Text.literal("Null"),true);
+            }
+            else{
+                boolean flag = true;
+                for(Element element : elements){
+                    if(flag){
+                        flag = false;
+                        player.sendMessage(Text.literal(element.toString()));
+                    }
+                    else {
+                        player.sendMessage(Text.literal(","+element.toString()));
+                    }
+                }
+            }
+        }
     }
 
     /*
@@ -33,7 +79,9 @@ public class ElementContainer {
          集合为空
          */
         if (elements.isEmpty()) {
-            addElement(element);
+            if(!(element instanceof Anemo || element instanceof Geo)){//风岩不附着
+                addElement(element);
+            }
         }
         /*
         如果只有一个元素被附着
@@ -59,7 +107,7 @@ public class ElementContainer {
                     beReactionElement.subGauge(gauge);
                 } else if (beReactionElement instanceof Element) {//雷
                     addElement(element);
-                } else if (beReactionElement instanceof Dendro) {
+                } else if (beReactionElement instanceof Dendro) {//草
                     beReactionElement.subGauge(gauge);
                 } else {
                     System.out.println("[Warning] Wrong element be applied!");
@@ -68,9 +116,9 @@ public class ElementContainer {
 
             //如若添加的元素为火
             if (element instanceof Pyro) {
-                if (beReactionElement instanceof Hydro) {
+                if (beReactionElement instanceof Hydro) {//水
                     beReactionElement.subGauge(gauge * 0.5);
-                } else if (beReactionElement instanceof Electro) {
+                } else if (beReactionElement instanceof Electro) {//雷
                     beReactionElement.subGauge(gauge);
 
                 /*
@@ -87,26 +135,7 @@ public class ElementContainer {
         }
     }
 
-    public void tick(){
 
-        for (Element element : elements) {
-            /*
-            下面运行每个附着元素的tick方法
-             */
-            element.tick();
-            /*
-            移除元素量小于等于零的元素
-             */
-            if(element.getGauge()<=0){
-                removeElement(element);
-            }
-
-            if(displayElement && update == 0){
-                update =(update+1)%10;
-                owner.sendMessage(Text.literal("Debug!Has element:" + element));
-            }
-        }
-    }
 
 
     /*
