@@ -1,0 +1,4 @@
+{
+  "death.attack.element_damage": "%1$s <暂未适配死亡提示>",
+  "death.attack.element_damage.player": "%1$s <暂未适配死亡提示> %2$s <暂未适配死亡提示>"
+}

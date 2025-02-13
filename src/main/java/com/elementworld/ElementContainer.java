@@ -1,8 +1,13 @@
 package com.elementworld;
 
 import com.elementworld.elements.*;
+import com.elementworld.interfaces.LivingEntityHolder;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -22,9 +27,11 @@ public class ElementContainer {
     public static final Hydro HYDRO = (Hydro) Element.create(Element.ElementType.HYDRO,0);
     public static final Pyro PYRO = (Pyro) Element.create(Element.ElementType.PYRO,0);
 
-    //一些常量
+    //一些成员
     private final HashSet<Element> elements = new HashSet<>();//该映射用于存储该容器所拥有的元素实例
     private final LivingEntity owner;//此为该容器拥有者
+    private LivingEntity latestAttacker;//最后施加元素的生物
+
 
     //!Debug!
     @SuppressWarnings("FieldCanBeLocal")
@@ -35,15 +42,19 @@ public class ElementContainer {
     public boolean displayElement = false;//是否显示元素（这里应该是是否显示图标，与上方debug模式作区分）
 
     //owner的各类属性
-    public int mastery;//元素精通
+    private double mastery;//元素精通
+    private double resistance;//抗性
+    private double bonus;//增伤
 
     //CD类别成员
     private int electroChargedCD = 0;//感电反应计时器
     private int combustionCD = 0;//燃烧反应计时器
+    private int superConductCD = 0;//超导反应计时器
 
     //owner的状态
     private boolean isCombustion = false;
     private boolean isElectroCharged = false;
+    private boolean isSuperConduct = false;
 
     //辅助数据结构
     private HashMap<Class<? extends Element>,Boolean> hasElement;//此处使用懒加载节省空间
@@ -54,13 +65,6 @@ public class ElementContainer {
     }
 
     public void tick(){
-
-        //使得overloadCD流动
-        if(electroChargedCD >0){
-            electroChargedCD--;
-        }
-
-
         for (Element element : elements) {
             /*
             下面运行每个附着元素的tick方法
@@ -110,6 +114,12 @@ public class ElementContainer {
         for(Element element : elements){
             hasElement.put(element.getClass(),true);
         }
+
+        /*
+        超导反应相关逻辑实现
+         */
+        if(isSuperConduct)
+
 
         /*
         感电&燃烧反应实现：
@@ -162,10 +172,10 @@ public class ElementContainer {
                 }
                 else{
                     electroChargedCD = 20;
-                    owner.damage(null,3);
+                    owner.damage(getDamageSource(), 0.6f);
                 }
             }
-            else {
+            else {//如果没有水雷共存
                 isElectroCharged = false;
             }
         }
@@ -176,8 +186,22 @@ public class ElementContainer {
      */
     public void applyElement(Element element, @Nullable LivingEntity source){
         element.setOwner(owner);
-        element.setSource(source);
+        element.setAttacker(source);
 
+        //更新容器的最后攻击者(反应触发者）
+        latestAttacker = element.getAttacker();
+
+        //获取攻击者的元素精通和元素反应容器
+        ElementContainer newElementContainer;
+        double attackerMastery;
+        if(element.getOwner() instanceof LivingEntityHolder livingEntityHolder){
+            newElementContainer = livingEntityHolder.elementWorld$getElementContainer();
+            attackerMastery = newElementContainer.getMastery();
+        }
+        else{
+            newElementContainer = null;
+            attackerMastery = 0;
+        }
 
         /*
          集合为空
@@ -192,6 +216,8 @@ public class ElementContainer {
          */
         else if (elements.size() == 1) {
             Element bRElement = elements.iterator().next();
+
+
 
             double gauge = element.getGauge();//后手元素元素量
             double beGauge = bRElement.getGauge();//附着元素元素量
@@ -234,7 +260,8 @@ public class ElementContainer {
             if (element instanceof Pyro) {
                 if (bRElement instanceof Hydro) {//水
                     bRElement.subGauge(gauge * 0.5);
-                } else if (bRElement instanceof Electro) {//雷
+                }
+                else if (bRElement instanceof Electro) {//雷
                     removeElement(bRElement);
                 /*
                 下面实现超载：
@@ -242,10 +269,9 @@ public class ElementContainer {
                     先获取容器拥有者的坐标位置和服务器世界实例，
                     然后在坐标位置生成一个有伤害的爆炸
                  */
-                    Vec3d playerPos = owner.getPos();
-                    Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
-                            .createExplosion(source, playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
-                    owner.damage(null,4*mastery);
+                    if (newElementContainer != null) {
+                        overload(newElementContainer);
+                    }
                 }
                 else if(bRElement instanceof Cryo){//冰！！
                     bRElement.subGauge(gauge*2);
@@ -262,6 +288,22 @@ public class ElementContainer {
                 }
                 else{
                     System.out.println("[Warning] ElementApplied Error!");
+                }
+            }
+            //如果添加的元素为雷
+            if(element instanceof Electro){
+                if(bRElement instanceof Pyro){//火
+                    removeElement(bRElement);
+                    if (newElementContainer != null) {
+                        overload(newElementContainer);
+                    }
+                }
+                else if(bRElement instanceof Hydro){
+                    addElement(element);
+                }
+                else if(bRElement instanceof Cryo){
+                    isSuperConduct = true;
+                    superConductCD = 240;
                 }
             }
         }
@@ -281,6 +323,53 @@ public class ElementContainer {
     //移除对应元素
     private void removeElement(Element element){
         elements.remove(element);
+
+        //懒加载这个映射
+        if(hasElement == null){hasElement = new HashMap<>();}
+        hasElement.put(element.getClass(),false);
+    }
+
+    /*
+    下面实现超载：
+     超载反应特征：爆炸并且造成伤害
+        先获取容器拥有者的坐标位置和服务器世界实例，
+      然后在坐标位置生成一个有伤害的爆炸
+    */
+    private void overload(LivingEntity source){
+        ElementContainer container;
+        if(source instanceof LivingEntityHolder holder){
+            container = holder.elementWorld$getElementContainer();
+        }
+        else {
+            container = null;
+        }
+
+        Vec3d playerPos = owner.getPos();
+        Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
+                .createExplosion(source, playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
+        if (container != null) {
+            owner.damage(getDamageSource(),damage(3,container));
+        }
+        else{
+            System.out.println("[Warning] 该实体没有正确加载Mixin");
+        }
+    }
+
+    private void overload(ElementContainer attackerElementContainer){
+        Vec3d playerPos = owner.getPos();
+        Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
+                .createExplosion(attackerElementContainer.getOwner(), playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
+        owner.damage(getDamageSource(), damage(3, attackerElementContainer));
+    }
+
+    /*
+    计算最终结算伤害
+     */
+    public float damage(float originValue,ElementContainer attackerElementContainer){
+        return (float) (originValue//基础数值
+                *(1+attackerElementContainer.getMastery())//精通乘区
+                *(1-resistance)//抗性乘区
+                *(1+attackerElementContainer.getBonus()));//增伤乘区
     }
 
     /*
@@ -300,6 +389,8 @@ public class ElementContainer {
         return hasElement.get(c);
     }
 
+
+
     /*
     以下为getter&setter
      */
@@ -312,6 +403,10 @@ public class ElementContainer {
         return isElectroCharged;
     }
 
+    public boolean isSuperConduct() {
+        return isSuperConduct;
+    }
+
     public Collection<Element> getElements(){
         return elements;
     }
@@ -319,5 +414,27 @@ public class ElementContainer {
     public LivingEntity getOwner() {
         return owner;
     }
+
+    public double getMastery(){
+        return mastery;
+    }
+
+    public double getBonus(){
+        return bonus;
+    }
+
+    public double getResistance(){
+        return resistance;
+    }
+
+    /*
+    该方法创建的伤害类型为持续反应伤害，此处source是玩家本身，attacker是最后施加元素的生物
+     */
+    private DamageSource getDamageSource(){
+        Registry<DamageType> damageTypeRegistry = owner.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE);
+        DamageType type = damageTypeRegistry.get(ElementWorld.ELEMENT_DAMAGE);
+        return new DamageSource(damageTypeRegistry.getEntry(type),owner,latestAttacker);
+    }
+
 
 }

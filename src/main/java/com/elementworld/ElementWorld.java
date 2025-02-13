@@ -4,13 +4,22 @@ import com.elementworld.command.Commands;
 import com.elementworld.command.Hello;
 import com.elementworld.registers.ArgumentType;
 import net.fabricmc.api.ModInitializer;
-
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.entity.damage.DamageType;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ElementWorld implements ModInitializer {
 	public static final String MOD_ID = "elementworld";
+
+	//注册伤害类型
+	public static final RegistryKey<DamageType> ELEMENT_DAMAGE
+			= RegistryKey.of(RegistryKeys.DAMAGE_TYPE,new Identifier(ElementWorld.MOD_ID,"element_damage"));
+
+
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.

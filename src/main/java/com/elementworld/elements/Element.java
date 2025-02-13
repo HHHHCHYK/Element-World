@@ -1,7 +1,13 @@
 package com.elementworld.elements;
 
 
+import com.elementworld.ElementWorld;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageType;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
 
 public class Element {
 
@@ -10,8 +16,9 @@ public class Element {
     }
 
     //拥有者和施加者
-    private LivingEntity source;
+    private LivingEntity attacker;
     private LivingEntity owner;
+    private Entity source;
 
     //元素量和衰减速度
     protected double gauge;
@@ -21,6 +28,8 @@ public class Element {
         this.gauge = gauge;
         decaySpeed = this.gauge / (7+2.5* this.gauge) / 20;
     }
+
+
 
     /*
     这里实现元素衰减或者其他每个游戏刻都会执行的内容
@@ -85,8 +94,8 @@ public class Element {
         this.gauge = gauge;
     }
 
-    public void setSource(LivingEntity source){
-        this.source = source;
+    public void setAttacker(LivingEntity attacker){
+        this.attacker = attacker;
     }
 
     public void setOwner(LivingEntity owner){
@@ -97,8 +106,17 @@ public class Element {
         return owner;
     }
 
-    public LivingEntity getSource(){
-        return source;
+    public LivingEntity getAttacker(){
+        return attacker;
+    }
+
+    public Entity getSource(){return source;}
+
+    public DamageSource getDamageSource(){
+        Registry<DamageType> damageTypeRegistry = owner.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE);
+        DamageType type = damageTypeRegistry.get(ElementWorld.ELEMENT_DAMAGE);
+
+        return new DamageSource(damageTypeRegistry.getEntry(type),source,attacker);
     }
 }
 
