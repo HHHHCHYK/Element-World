@@ -11,25 +11,43 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class ElementContainer {
-    private final HashSet<Element> elements = new HashSet<Element>();
-    private final LivingEntity owner;
+
+    //创建一个类的实例方便调用
+    public static final Anemo ANEMO = (Anemo) Element.create(Element.ElementType.ANEMO,0);
+    public static final Cryo CRYO = (Cryo) Element.create(Element.ElementType.CRYO,0);
+    public static final Dendro DENDRO = (Dendro) Element.create(Element.ElementType.DENDRO,0);
+    public static final Electro ELECTRO = (Electro) Element.create(Element.ElementType.ELECTRO,0);
+    public static final Frozen FROZEN = (Frozen) Element.create(Element.ElementType.FROZEN,0);
+    public static final Geo GEO = (Geo) Element.create(Element.ElementType.GEO,0);
+    public static final Hydro HYDRO = (Hydro) Element.create(Element.ElementType.HYDRO,0);
+    public static final Pyro PYRO = (Pyro) Element.create(Element.ElementType.PYRO,0);
+
+    //一些常量
+    private final HashSet<Element> elements = new HashSet<>();//该映射用于存储该容器所拥有的元素实例
+    private final LivingEntity owner;//此为该容器拥有者
 
     //!Debug!
     @SuppressWarnings("FieldCanBeLocal")
-    private final boolean debugMode = true;
+    private final boolean debugMode = true;//此处打开debug模式，等到正式发布时删除（将此处变量设为false）这部分代码
+    private int displayRateCD = 0;
 
     //正常生存可以调整的模式
-    public boolean displayElement = false;
+    public boolean displayElement = false;//是否显示元素（这里应该是是否显示图标，与上方debug模式作区分）
 
     //owner的各类属性
-    public int mastery;
+    public int mastery;//元素精通
 
     //CD类别成员
-    private int electroChargedCD = 0;
-    private int combustionCD = 0;
+    private int electroChargedCD = 0;//感电反应计时器
+    private int combustionCD = 0;//燃烧反应计时器
+
+    //owner的状态
+    private boolean isCombustion = false;
+    private boolean isElectroCharged = false;
 
     //辅助数据结构
     private HashMap<Class<? extends Element>,Boolean> hasElement;//此处使用懒加载节省空间
+    private final Vector<Element> deadElements = new Vector<>();//这是元素量小于0的元素的集合
 
     public ElementContainer(LivingEntity owner){
         this.owner = owner;
@@ -42,7 +60,7 @@ public class ElementContainer {
             electroChargedCD--;
         }
 
-        Vector<Element> deadElements = new Vector<Element>();
+
         for (Element element : elements) {
             /*
             下面运行每个附着元素的tick方法
@@ -55,26 +73,42 @@ public class ElementContainer {
                 deadElements.add(element);
             }
         }
-
         //统一移除被标记的元素
         for(Element element : deadElements){
             removeElement(element);
         }
+        deadElements.clear();//清空这个tick需要清除的元素
+
 
         //Debug模式：显示玩家目前所拥有的元素
         if(owner instanceof PlayerEntity player && debugMode){
             boolean flag = true;
+            StringBuilder stringBuilder = new StringBuilder();
             for(Element element : elements){
                 String gauge = String.format("%.2f",element.getGauge());
                 if(flag){
                     flag = false;
-                    player.sendMessage(Text.literal(element.toString() + gauge),true);
-                    continue;
+                    stringBuilder.append(element.toString()).append(" ").append(gauge);
                 }
                 else {
-                    player.sendMessage(Text.literal(" , " + element.toString() + gauge),true);
+                    stringBuilder.append(",").append(element.toString()).append(" ").append(gauge);
                 }
             }
+            if(displayRateCD > 0){
+                displayRateCD--;
+            }
+            else{
+                displayRateCD = 5;
+                player.sendMessage(Text.literal(stringBuilder.toString()),true);
+            }
+        }
+
+        //懒加载这个映射
+        if(hasElement == null){hasElement = new HashMap<>();}
+
+        //将其中元素的状态更新
+        for(Element element : elements){
+            hasElement.put(element.getClass(),true);
         }
 
         /*
@@ -82,18 +116,57 @@ public class ElementContainer {
             检查容器中是否有超过两种元素，如果有，检查元素类别
          */
         if(elements.size() == 2){
-            //懒加载这个映射
-            if(hasElement == null){hasElement = new HashMap<>();}
-
-            //将其中元素的状态更新
-            for(Element element : elements){
-                hasElement.put(element.getClass(),true);
-            }
-
             if(has(Pyro.class) && has(Dendro.class)){//燃烧
+                if(debugMode){
+                    System.out.println("Is Com");
+                }
 
-            } else if (has(Hydro.class) && has(Electro.class)) {//感电
+                //将isCombustion标记为true
+                isCombustion = true;
 
+                //这里实现CD的自然减少
+                if(combustionCD > 0){
+                    combustionCD--;
+                }
+                else{
+                    combustionCD = 5;//重置cd
+
+                    if(!owner.isOnFire()){
+                        /*
+                        此处当拥有者没有在燃烧时，赋予一个持续一秒的燃烧状态（此处是原版的燃烧，与燃烧反应区分）
+                         */
+                        owner.setOnFireFor(5);
+                    }
+                }
+
+
+                /*
+                    下面实现对于元素量的操作：
+                        火元素设为两单位，草元素每秒减少0.4（0.02gpt）
+                     */
+                for(Element element : elements){
+                    if(element instanceof Pyro){
+                        element.setGauge(2);
+                    }
+                    else if(element instanceof Dendro){
+                        element.subGauge(0.02);
+                    }
+                }
+            }
+            else{//如果并非火草共存
+                isCombustion = false;
+            }
+            if (has(Hydro.class) && has(Electro.class)) {//感电
+                if(electroChargedCD > 0){
+                    electroChargedCD--;
+                }
+                else{
+                    electroChargedCD = 20;
+                    owner.damage(null,3);
+                }
+            }
+            else {
+                isElectroCharged = false;
             }
         }
     }
@@ -144,6 +217,7 @@ public class ElementContainer {
                     /*
                     感电反应相关逻辑写在tick()
                      */
+                    electroChargedCD = 20;
                 }
                 else if (bRElement instanceof Dendro) {//草
                     /*
@@ -161,7 +235,7 @@ public class ElementContainer {
                 if (bRElement instanceof Hydro) {//水
                     bRElement.subGauge(gauge * 0.5);
                 } else if (bRElement instanceof Electro) {//雷
-                    bRElement.subGauge(gauge);
+                    removeElement(bRElement);
                 /*
                 下面实现超载：
                 超载反应特征：爆炸并且造成伤害
@@ -170,7 +244,8 @@ public class ElementContainer {
                  */
                     Vec3d playerPos = owner.getPos();
                     Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
-                            .createExplosion(owner, playerPos.x, playerPos.y, playerPos.z, 3, World.ExplosionSourceType.BLOCK);
+                            .createExplosion(source, playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
+                    owner.damage(null,4*mastery);
                 }
                 else if(bRElement instanceof Cryo){//冰！！
                     bRElement.subGauge(gauge*2);
@@ -183,6 +258,7 @@ public class ElementContainer {
                     /*
                     燃烧反应的逻辑在tick()
                      */
+                    combustionCD = 5;
                 }
                 else{
                     System.out.println("[Warning] ElementApplied Error!");
@@ -215,6 +291,9 @@ public class ElementContainer {
     }
 
     public boolean has(Class<? extends Element> c){
+        if(hasElement == null){
+            return false;
+        }
         if (hasElement.get(c) == null){
             return false;
         }
@@ -224,6 +303,14 @@ public class ElementContainer {
     /*
     以下为getter&setter
      */
+
+    public boolean isCombustion(){
+        return isCombustion;
+    }
+
+    public boolean isElectroCharged(){
+        return isElectroCharged;
+    }
 
     public Collection<Element> getElements(){
         return elements;
