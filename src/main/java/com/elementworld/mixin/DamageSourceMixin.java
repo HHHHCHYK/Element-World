@@ -15,13 +15,28 @@ public class DamageSourceMixin implements DamageSourceHolder {
     private Element damageElementType = null;
 
     @Unique
+    private boolean isNormalReaction = false;
+
+    @Unique
     public Element elementWorld$getElement() {
         return damageElementType;
     }
 
     @Unique
-    public void elementWorld$setDamageElementType(Element element){
+    public DamageSource elementWorld$setDamageElementType(Element element){
         this.damageElementType = element;
+        return (DamageSource) (Object)(this);
+    }
+
+    @Override
+    public boolean elementWorld$isNormalReaction() {
+        return isNormalReaction;
+    }
+
+    @Override
+    public DamageSource elementWorld$setNormal(){
+        isNormalReaction = true;
+        return (DamageSource) (Object) this;
     }
 
 

@@ -1,0 +1,81 @@
+package com.elementworld.reaction;
+
+import com.elementworld.Calculater;
+import com.elementworld.elements.Electro;
+import com.elementworld.elements.Element;
+import com.elementworld.elements.Hydro;
+import com.elementworld.interfaces.DamageSourceHolder;
+import com.elementworld.interfaces.LivingEntityHolder;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.util.math.Box;
+
+import java.util.List;
+
+public class Electro_Charged {
+    private final LivingEntity owner;
+    private final LivingEntity attacker;
+    private final DamageSource damageSource;
+    public boolean die = false;
+
+    private int reactionCD = 20;
+
+    private final Hydro hydro;
+    private final Electro electro;
+    private final Element secondElement;
+
+    public final float damageValue;
+
+    public Electro_Charged(LivingEntity owner,DamageSource damageSource,Element firseElement,Element secondELement){
+
+        //标定拥有者，施加者，还有参与反应的两个元素实例
+        this.owner = owner;
+        this.damageSource = damageSource;
+        if(damageSource.getAttacker() instanceof LivingEntity){
+            this.attacker =(LivingEntity) damageSource.getAttacker();
+        }
+        else {
+            attacker = null;
+        }
+
+        //初始化反应伤害
+        damageValue = (float) (0.6*((1+secondELement.getOwnerContainer().getMasteryBonus())));
+
+        this.secondElement = secondELement;
+        hydro = (Hydro) firseElement;
+        electro = (Electro) secondElement;
+    }
+
+    public void tick(){
+        if(hydro.getGauge()<=0 && electro.getGauge() <= 0){
+            die = true;
+            return;
+        }
+        if(reactionCD > 0){
+            reactionCD--;
+        }
+        else if(reactionCD == 0){
+            hydro.subGauge(0.4);
+            electro.subGauge(0.4);
+
+            DamageSource reactionDamage = DamageSourceHolder.createDamageSource(owner.getWorld(),owner,attacker);
+            owner.damage(reactionDamage,damageValue);
+
+            double x = owner.getX();double y = owner.getY();double z = owner.getZ();double range = 5;
+
+            List<LivingEntity> livingEntityList = owner.getWorld().getEntitiesByClass(
+                    LivingEntity.class,
+                    new Box(x-range,y-range,z-range,x+range,y+range,z+range),
+                    livingEntity -> livingEntity instanceof LivingEntityHolder
+            );
+            for(LivingEntity livingEntity : livingEntityList){
+                if(livingEntity instanceof LivingEntityHolder && Calculater.distance(livingEntity.getPos(),owner.getPos()) < 5){
+                    livingEntity.damage(reactionDamage,damageValue);
+                }
+            }
+        }
+        else{
+            reactionCD = 20;
+        }
+    }
+}

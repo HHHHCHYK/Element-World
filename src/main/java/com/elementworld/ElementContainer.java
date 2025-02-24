@@ -1,6 +1,7 @@
 package com.elementworld;
 
 import com.elementworld.elements.*;
+import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
 import com.elementworld.modifiers.Modifier;
 import com.elementworld.modifiers.Modifiers;
@@ -20,6 +21,7 @@ import java.util.*;
 
 public class ElementContainer {
 
+    /*
     //创建一个类的实例方便调用
     public static final Anemo ANEMO = (Anemo) Element.create(Element.ElementType.ANEMO,0);
     public static final Cryo CRYO = (Cryo) Element.create(Element.ElementType.CRYO,0);
@@ -29,9 +31,12 @@ public class ElementContainer {
     public static final Geo GEO = (Geo) Element.create(Element.ElementType.GEO,0);
     public static final Hydro HYDRO = (Hydro) Element.create(Element.ElementType.HYDRO,0);
     public static final Pyro PYRO = (Pyro) Element.create(Element.ElementType.PYRO,0);
+    public static final Quicken QUICKEN = (Quicken) Element.create(Element.ElementType.Quicken,0);
+
+     */
 
     //一些成员
-    private final HashSet<Element> elements = new HashSet<>();//该映射用于存储该容器所拥有的元素实例
+    private final ArrayList<Element> elements = new ArrayList<>();//该映射用于存储该容器所拥有的元素实例
     private final LivingEntity owner;//此为该容器拥有者
     private LivingEntity latestAttacker;//最后施加元素的生物
     private HashSet<Modifiers> modifiersSet;
@@ -49,17 +54,17 @@ public class ElementContainer {
     private double resistance;//抗性
     private double bonus;//增伤
 
-    //CD类别成员
-    private int electroChargedCD = 0;//感电反应计时器
-    private int combustionCD = 0;//燃烧反应计时器
 
     //owner的状态
     private boolean isCombustion = false;
     private boolean isElectroCharged = false;
+    private boolean isCatalyze = false;
+    private boolean isWet = false;
 
     //辅助数据结构
-    private HashMap<Class<? extends Element>,Boolean> hasElement;//此处使用懒加载节省空间
+    private HashMap<Class<? extends Element>,Boolean> hasElement;//此集合用于表示是否有某种元素
     private final Vector<Element> deadElements = new Vector<>();//这是元素量小于0的元素的集合
+
 
 
     //构造函数
@@ -68,6 +73,12 @@ public class ElementContainer {
     }
 
     public void tick(){
+        /*
+        这里放置其他类的tick方法
+         */
+        for(Modifiers modifiers : modifiersSet){
+            modifiers.tick();
+        }
         for (Element element : elements) {
             /*
             下面运行每个附着元素的tick方法
@@ -80,6 +91,10 @@ public class ElementContainer {
                 deadElements.add(element);
             }
         }
+
+        //----------------上面为tick方法-----------------------------------------------
+
+
         //统一移除被标记的元素
         for(Element element : deadElements){
             removeElement(element);
@@ -113,68 +128,16 @@ public class ElementContainer {
         //懒加载这个映射
         if(hasElement == null){hasElement = new HashMap<>();}
 
+        boolean hasCatalyze = false;
         //将其中元素的状态更新
         for(Element element : elements){
+            if(!hasCatalyze &&element instanceof Quicken){
+                hasCatalyze = true;
+            }
             hasElement.put(element.getClass(),true);
         }
-
-        /*
-        感电&燃烧反应实现：
-            检查容器中是否有超过两种元素，如果有，检查元素类别
-        */
-        if(elements.size() == 2){
-                if(has(Pyro.class) && has(Dendro.class)){//燃烧
-
-                //将isCombustion标记为true
-                isCombustion = true;
-
-                //这里实现CD的自然减少
-                if(combustionCD > 0){
-                    combustionCD--;
-                }
-                else{
-                    combustionCD = 5;//重置cd
-
-                    if(!owner.isOnFire()){
-                        /*
-                        此处当拥有者没有在燃烧时，赋予一个持续一秒的燃烧状态（此处是原版的燃烧，与燃烧反应区分）
-                         */
-                        owner.setOnFireFor(5);
-                    }
-                }
-
-
-                /*
-                    下面实现对于元素量的操作：
-                        火元素设为两单位，草元素每秒减少0.4（0.02gpt）
-                     */
-                for(Element element : elements){
-                    if(element instanceof Pyro){
-                        element.setGauge(2);
-                    }
-                    else if(element instanceof Dendro){
-                        element.subGauge(0.02);
-                    }
-                }
-            }
-            else{//如果并非火草共存
-                isCombustion = false;
-            }
-            if (has(Hydro.class) && has(Electro.class)) {//感电
-
-                isElectroCharged = true;
-
-                if(electroChargedCD > 0){
-                    electroChargedCD--;
-                }
-                else{
-                    electroChargedCD = 20;
-                    owner.damage(createDamageSource(), 0.6f);
-                }
-            }
-            else {//如果没有水雷共存
-                isElectroCharged = false;
-            }
+        if(hasCatalyze && !isCatalyze){
+            isCatalyze = true;
         }
     }
 
@@ -193,14 +156,11 @@ public class ElementContainer {
 
         //获取攻击者的元素精通和元素反应容器
         ElementContainer attackerElementContainer;
-        double attackerMastery;
         if(element.getOwner() instanceof LivingEntityHolder livingEntityHolder){
             attackerElementContainer = livingEntityHolder.elementWorld$getElementContainer();
-            attackerMastery = attackerElementContainer.getMastery();
         }
         else{
             attackerElementContainer = null;
-            attackerMastery = 0;
         }
 
         /*
@@ -234,16 +194,22 @@ public class ElementContainer {
                     //此处生成冻元素
                     elements.add(new Frozen(Math.min(gauge, beGauge) * 2));
                     bRElement.subGauge(gauge);
+                    element.subGauge(bRElement.getGauge());
+                    if(element.getGauge()>0){
+                        elements.add(element);
+                    }
                 }
                 else if(bRElement instanceof Frozen){//冻
                     addElement(element);
                 }
                 else if (bRElement instanceof Element) {//雷
                     addElement(element);
+                    if (attackerElementContainer != null) {
+
+                    }
                     /*
                     感电反应相关逻辑写在tick()
                      */
-                    electroChargedCD = 20;
                 }
                 else if (bRElement instanceof Dendro) {//草
                     /*
@@ -280,11 +246,14 @@ public class ElementContainer {
                     bRElement.subGauge(gauge*2);
                 }
                 else if(bRElement instanceof Dendro){//草
+                    if (attackerElementContainer != null) {
+
+                    }
                     addElement(element);
                     /*
                     燃烧反应的逻辑在tick()
                      */
-                    combustionCD = 5;
+
                 }
                 else{
                     System.out.println("[Warning] ElementApplied Error!");
@@ -304,8 +273,6 @@ public class ElementContainer {
                 else if(bRElement instanceof Cryo){//冰
                     removeElement(bRElement);//剧变反应无残留
 
-
-
                     /*
                     这里实现在某个范围内造成一次伤害
                      */
@@ -320,7 +287,7 @@ public class ElementContainer {
                     /*
                     下面造成伤害并且降低抗性
                      */
-                    Modifier modifier = new Modifier("SuperConductModifier",0.4, Modifiers.modifierMethod.MULTI);
+                    Modifier modifier = new Modifier("SuperConductModifier",0.4,240, Modifier.modifierMethod.MULTI);
                     for(LivingEntity entity : entityList){
                         if(Calculater.distance(entity.getPos(),getOwner().getPos()) <= 5){
                             entity.damage(null,0.5f);
@@ -332,6 +299,12 @@ public class ElementContainer {
                     }
                     getOwner().damage(null,0.5f);
                     this.getModifiers(Modifiers.modifierType.RESISTANCE).addModifier(modifier);
+                }
+                else if(bRElement instanceof Dendro){
+                    addElement(element);
+                    if (damageSource != null) {
+                        elements.add(new Quicken(Math.min(gauge,beGauge),getOwner(),element.getAttacker(),damageSource.getSource()));
+                    }
                 }
             }
         }
@@ -345,6 +318,9 @@ public class ElementContainer {
     //这个是带有损耗的元素附着模式
     private void addElement(Element element){
         element.setGauge(element.getGauge()*0.8);//元素附着损耗
+        if(element instanceof Hydro){
+            isWet = true;
+        }
         elements.add(element);
     }
 
@@ -356,6 +332,9 @@ public class ElementContainer {
         if(hasElement == null){hasElement = new HashMap<>();}
         //当被移除的时候，将存在映射设置为不存在
         hasElement.put(element.getClass(),false);
+        if(element instanceof Hydro){
+            isWet = false;
+        }
     }
 
     /*
@@ -364,20 +343,12 @@ public class ElementContainer {
         先获取容器拥有者的坐标位置和服务器世界实例，
       然后在坐标位置生成一个有伤害的爆炸
     */
-    private void overload(LivingEntity source){
-
-
-        Vec3d playerPos = owner.getPos();
-        Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
-                .createExplosion(source, playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
-        owner.damage(createDamageSource(),3);
-    }
 
     private void overload(ElementContainer attackerElementContainer){
         Vec3d playerPos = owner.getPos();
         Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
                 .createExplosion(attackerElementContainer.getOwner(), playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
-        owner.damage(createDamageSource(), 3);
+        owner.damage(createDamageSource(), (float) (3 * (1 + attackerElementContainer.getMasteryBonus())));
     }
 
     /*
@@ -433,6 +404,8 @@ public class ElementContainer {
         return null;
     }
 
+
+
     public boolean isCombustion(){
         return isCombustion;
     }
@@ -445,6 +418,10 @@ public class ElementContainer {
         return elements;
     }
 
+    public boolean isWet() {
+        return isWet;
+    }
+
     public LivingEntity getOwner() {
         return owner;
     }
@@ -455,6 +432,10 @@ public class ElementContainer {
 
     public double getMastery(){
         return getModifiers(Modifiers.modifierType.MASTERY).applyModifiers((float) getBaseMastery());
+    }
+
+    public double getMasteryBonus(){
+        return (16*getMastery())/(getMastery()+2000);
     }
 
     public double getBaseBonus(){
@@ -473,15 +454,13 @@ public class ElementContainer {
         return getModifiers(Modifiers.modifierType.RESISTANCE).applyModifiers((float) getBaseResistance());
     }
 
+
     /*
     该方法创建的伤害类型为持续反应伤害，此处source是玩家本身，attacker是最后施加元素的生物
      */
     private DamageSource createDamageSource(){
-        Registry<DamageType> damageTypeRegistry = getOwner().getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE);
-        DamageType type = damageTypeRegistry.get(ElementWorld.ELEMENT_DAMAGE);
-        return new DamageSource(damageTypeRegistry.getEntry(type),getOwner(),latestAttacker);
+        return DamageSourceHolder.createDamageSource(owner.getWorld(),owner,latestAttacker);
     }
-
 
 
     //下面的方法已经弃置
@@ -498,6 +477,7 @@ public class ElementContainer {
 
         return damageSource;
     }
+
 
 
 }

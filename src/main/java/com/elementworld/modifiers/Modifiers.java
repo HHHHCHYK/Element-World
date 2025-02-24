@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public class Modifiers {
 
-
+    //用于标识这个列表的操作目标
     public enum modifierType{
         MAX_HEALTH,
         BASE_DAMAGE,
@@ -17,12 +17,27 @@ public class Modifiers {
         BONUS
     }
 
-    public enum modifierMethod{
-        ADD,MULTI
-    }
 
+    //构造方法
     public Modifiers(modifierType target){
         this.type = target;
+    }
+
+    private ArrayList<Modifier> deadModifiers;
+
+    public void tick(){
+        for(Modifier modifier : modifiers){
+            if(modifier.isDie()){
+                if(deadModifiers == null){deadModifiers = new ArrayList<>();}
+                deadModifiers.add(modifier);
+            }
+            modifier.tick();
+        }
+
+        for(Modifier modifier : deadModifiers){
+            modifiers.remove(modifier);
+        }
+        deadModifiers.clear();
     }
 
     private final modifierType type;
@@ -32,11 +47,11 @@ public class Modifiers {
 
 
     //增减修改器
-    public void addModifier(String name,double value,modifierMethod method){
+    public void addModifier(String name, double value,int duration, Modifier.modifierMethod method){
         if(modifiers == null){
             modifiers = new ArrayList<>();
         }
-        Modifier modifier = new Modifier(name,value,method);
+        Modifier modifier = new Modifier(name,value,duration,method);
         modifierUUIDHashMap.put(UUID.nameUUIDFromBytes(name.getBytes()),modifier);
         modifiers.add(modifier);
     }
@@ -68,5 +83,9 @@ public class Modifiers {
     //getter & setter
     public modifierType getType() {
         return type;
+    }
+
+    public ArrayList<Modifier> getModifiers(){
+        return modifiers;
     }
 }

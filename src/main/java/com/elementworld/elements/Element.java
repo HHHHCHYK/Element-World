@@ -1,35 +1,44 @@
 package com.elementworld.elements;
 
 
-import com.elementworld.ElementWorld;
+import com.elementworld.ElementContainer;
+import com.elementworld.interfaces.LivingEntityHolder;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKeys;
 
 public class Element {
 
     public static enum ElementType {
-        ANEMO,CRYO,DENDRO,ELECTRO,FROZEN,GEO,HYDRO,PYRO
+        ANEMO,CRYO,DENDRO,ELECTRO,FROZEN,GEO,HYDRO,PYRO,Quicken
     }
 
     //拥有者和施加者
-    private LivingEntity attacker;
-    private LivingEntity owner;
-    private Entity source;
+    protected LivingEntity attacker;
+    protected LivingEntity owner;
+    protected Entity source;
+    protected ElementContainer ownerContainer;
 
     //元素量和衰减速度
     protected double gauge;
     protected double decaySpeed;
+
 
     public Element(double gauge){
         this.gauge = gauge;
         decaySpeed = this.gauge / (7+2.5* this.gauge) / 20;
     }
 
+    public Element(double gauge,LivingEntity owner,LivingEntity attacker,Entity source){
+        this.gauge = gauge;
+        decaySpeed = this.gauge / (7+2.5* this.gauge) / 20;
+        this.attacker = attacker;
+        this.owner = owner;
+        this.source = source;
 
+        if (owner != null) {
+            ownerContainer = ((LivingEntityHolder)owner).elementWorld$getElementContainer();
+        }
+    }
 
     /*
     这里实现元素衰减或者其他每个游戏刻都会执行的内容
@@ -68,6 +77,9 @@ public class Element {
             }
             case ELECTRO -> {
                 return new Electro(gauge);
+            }
+            case Quicken -> {
+                return new Quicken(gauge);
             }
             default -> {
                 return null;
@@ -110,13 +122,10 @@ public class Element {
         return attacker;
     }
 
-    public Entity getSource(){return source;}
-
-    public DamageSource getDamageSource(){
-        Registry<DamageType> damageTypeRegistry = owner.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE);
-        DamageType type = damageTypeRegistry.get(ElementWorld.ELEMENT_DAMAGE);
-
-        return new DamageSource(damageTypeRegistry.getEntry(type),source,attacker);
+    public ElementContainer getOwnerContainer(){
+        return ownerContainer;
     }
+
+    public Entity getSource(){return source;}
 }
 

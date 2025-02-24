@@ -50,25 +50,29 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
         LivingEntity thisLivingEntity = (LivingEntity) (Object) this;//获取当前生物的实例
 
         if(!thisLivingEntity.isInvulnerableTo(source)){//判断生物是否对于来源无敌
-            ElementContainer ownerContainer = null;//当前生物元素容器
-            if((thisLivingEntity instanceof LivingEntityHolder owner)){
-                ownerContainer = owner.elementWorld$getElementContainer();
-            }
+            if(source instanceof DamageSourceHolder damageHolder){
+                if(damageHolder.elementWorld$isNormalReaction()){
+                    ElementContainer ownerContainer = null;//当前生物元素容器
+                    if((thisLivingEntity instanceof LivingEntityHolder owner)){
+                        ownerContainer = owner.elementWorld$getElementContainer();
+                    }
 
-            ElementContainer attackerContainer = null;//攻击者元素容器
-            if(source.getAttacker() instanceof LivingEntityHolder holder){
-                attackerContainer = holder.elementWorld$getElementContainer();
-            }
+                    ElementContainer attackerContainer = null;//攻击者元素容器
+                    if(source.getAttacker() instanceof LivingEntityHolder holder){
+                        attackerContainer = holder.elementWorld$getElementContainer();
+                    }
 
-            if (ownerContainer != null && attackerContainer != null) {
-                //这里处理抗性乘区和增伤乘区
-                amount = (float) (amount*(1-ownerContainer.getResistance())*(1+attackerContainer.getBonus()));
+                    if (ownerContainer != null && attackerContainer != null) {
+                        //这里处理抗性乘区和增伤乘区
+                        amount = (float) (amount*(1-ownerContainer.getResistance())*(1+attackerContainer.getBonus()));
 
-                //这里处理元素反应增伤
-                if(source instanceof DamageSourceHolder sourceHolder){
-                    Element attackElement = sourceHolder.elementWorld$getElement();
-                    if(attackElement != null){
-                        ownerContainer.applyElement(attackElement,source);
+                        //这里处理元素反应增伤
+                        if(source instanceof DamageSourceHolder sourceHolder){
+                            Element attackElement = sourceHolder.elementWorld$getElement();
+                            if(attackElement != null){
+                                ownerContainer.applyElement(attackElement,source);
+                            }
+                        }
                     }
                 }
             }
