@@ -6,10 +6,48 @@ import com.elementworld.interfaces.LivingEntityHolder;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 
-public class Element {
+public class Element extends EP {
 
     public static enum ElementType {
-        ANEMO,CRYO,DENDRO,ELECTRO,FROZEN,GEO,HYDRO,PYRO,Quicken
+        ANEMO,CRYO,DENDRO,ELECTRO,FROZEN,GEO,HYDRO,PYRO,Quicken,Physics
+    }
+
+    public static Class<? extends EP> enumToClass(ElementType elementType){
+        switch (elementType){
+            case ELECTRO -> {
+                return Electro.class;
+            }
+            case PYRO -> {
+                return Pyro.class;
+            }
+            case HYDRO -> {
+                return Hydro.class;
+            }
+            case CRYO -> {
+                return Cryo.class;
+            }
+            case ANEMO -> {
+                return Anemo.class;
+            }
+            case GEO -> {
+                return Geo.class;
+            }
+            case DENDRO -> {
+                return Dendro.class;
+            }
+            case FROZEN -> {
+                return Frozen.class;
+            }
+            case Quicken -> {
+                return Quicken.class;
+            }
+            case Physics -> {
+                return Physics.class;
+            }
+            default -> {
+                return null;
+            }
+        }
     }
 
     //拥有者和施加者
@@ -36,7 +74,7 @@ public class Element {
         this.source = source;
 
         if (owner != null) {
-            ownerContainer = ((LivingEntityHolder)owner).elementWorld$getElementContainer();
+            ownerContainer = ((LivingEntityHolder)owner).getElementContainer$EW();
         }
     }
 

@@ -1,4 +1,4 @@
-package com.elementworld.modifiers;
+package com.elementworld.elementComponents.modifiers;
 
 import java.util.UUID;
 

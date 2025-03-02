@@ -1,4 +1,4 @@
-package com.elementworld.reaction;
+package com.elementworld.elementComponents.reaction;
 
 import com.elementworld.Calculater;
 import com.elementworld.elements.Electro;
@@ -12,38 +12,17 @@ import net.minecraft.util.math.Box;
 
 import java.util.List;
 
-public class Electro_Charged {
-    private final LivingEntity owner;
-    private final LivingEntity attacker;
-    private final DamageSource damageSource;
-    public boolean die = false;
-
-    private int reactionCD = 20;
+public class Electro_Charged extends Reaction{
 
     private final Hydro hydro;
     private final Electro electro;
-    private final Element secondElement;
 
-    public final float damageValue;
+    private int reactionCD = 20;
 
     public Electro_Charged(LivingEntity owner,DamageSource damageSource,Element firseElement,Element secondELement){
-
-        //标定拥有者，施加者，还有参与反应的两个元素实例
-        this.owner = owner;
-        this.damageSource = damageSource;
-        if(damageSource.getAttacker() instanceof LivingEntity){
-            this.attacker =(LivingEntity) damageSource.getAttacker();
-        }
-        else {
-            attacker = null;
-        }
-
-        //初始化反应伤害
-        damageValue = (float) (0.6*((1+secondELement.getOwnerContainer().getMasteryBonus())));
-
-        this.secondElement = secondELement;
-        hydro = (Hydro) firseElement;
-        electro = (Electro) secondElement;
+        super(owner,damageSource,firseElement,secondELement);
+        hydro =(Hydro) firseElement;
+        electro =(Electro) secondELement;
     }
 
     public void tick(){

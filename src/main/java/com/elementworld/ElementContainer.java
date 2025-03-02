@@ -1,10 +1,15 @@
 package com.elementworld;
 
+import com.elementworld.elementComponents.BonusContainer;
+import com.elementworld.elementComponents.ResistancesContainer;
+import com.elementworld.elementComponents.modifiers.Modifier;
+import com.elementworld.elementComponents.modifiers.Modifiers;
+import com.elementworld.elementComponents.reaction.Combustion;
+import com.elementworld.elementComponents.reaction.Electro_Charged;
+import com.elementworld.elementComponents.reaction.Reaction;
 import com.elementworld.elements.*;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
-import com.elementworld.modifiers.Modifier;
-import com.elementworld.modifiers.Modifiers;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageType;
@@ -39,7 +44,8 @@ public class ElementContainer {
     private final ArrayList<Element> elements = new ArrayList<>();//该映射用于存储该容器所拥有的元素实例
     private final LivingEntity owner;//此为该容器拥有者
     private LivingEntity latestAttacker;//最后施加元素的生物
-    private HashSet<Modifiers> modifiersSet;
+    private HashSet<Modifiers> modifiersSet;//修改器集
+    private HashSet<Reaction> reactions;
 
     //!Debug!
     @SuppressWarnings("FieldCanBeLocal")
@@ -51,8 +57,9 @@ public class ElementContainer {
 
     //owner的各类属性
     private double mastery;//元素精通
-    private double resistance;//抗性
-    private double bonus;//增伤
+    private final BonusContainer bonusContainer;//增伤容器
+    private final ResistancesContainer resistancesContainer;//抗性容器
+    private final HashSet<Class<? extends EP>> immuneSet = new HashSet<>();
 
 
     //owner的状态
@@ -70,6 +77,8 @@ public class ElementContainer {
     //构造函数
     public ElementContainer(LivingEntity owner){
         this.owner = owner;
+        bonusContainer = new BonusContainer(owner);
+        resistancesContainer = new ResistancesContainer(owner);
     }
 
     public void tick(){
@@ -139,6 +148,33 @@ public class ElementContainer {
         if(hasCatalyze && !isCatalyze){
             isCatalyze = true;
         }
+
+
+
+        if(isElectroCharged || isCombustion){
+            Iterator<Reaction> iterator = reactions.iterator();
+            while (iterator.hasNext()){
+                Reaction reaction = iterator.next();
+                if(reaction instanceof Electro_Charged electroCharged){
+                    if(electroCharged.die){
+                        isElectroCharged = false;
+                        iterator.remove();
+                    }
+                    else {
+                        electroCharged.tick();
+                    }
+                }
+                else if(reaction instanceof Combustion combustion){
+                    if(combustion.die){
+                        isCombustion = false;
+                        iterator.remove();
+                    }
+                    else{
+                        combustion.tick();
+                    }
+                }
+            }
+        }
     }
 
     /*
@@ -157,7 +193,7 @@ public class ElementContainer {
         //获取攻击者的元素精通和元素反应容器
         ElementContainer attackerElementContainer;
         if(element.getOwner() instanceof LivingEntityHolder livingEntityHolder){
-            attackerElementContainer = livingEntityHolder.elementWorld$getElementContainer();
+            attackerElementContainer = livingEntityHolder.getElementContainer$EW();
         }
         else{
             attackerElementContainer = null;
@@ -205,11 +241,12 @@ public class ElementContainer {
                 else if (bRElement instanceof Element) {//雷
                     addElement(element);
                     if (attackerElementContainer != null) {
-
+                        if(reactions == null){
+                            reactions = new HashSet<>();
+                        }
+                        reactions.add(new Electro_Charged(owner,damageSource,bRElement,element));
+                        isElectroCharged = true;
                     }
-                    /*
-                    感电反应相关逻辑写在tick()
-                     */
                 }
                 else if (bRElement instanceof Dendro) {//草
                     /*
@@ -292,7 +329,7 @@ public class ElementContainer {
                         if(Calculater.distance(entity.getPos(),getOwner().getPos()) <= 5){
                             entity.damage(null,0.5f);
                             if(entity instanceof LivingEntityHolder holder){
-                                holder.elementWorld$getElementContainer()
+                                holder.getElementContainer$EW()
                                         .getModifiers(Modifiers.modifierType.RESISTANCE).addModifier(modifier);
                             }
                         }
@@ -352,19 +389,6 @@ public class ElementContainer {
     }
 
     /*
-    计算最终结算伤害
-     */
-    @Deprecated
-    public float damage(float originValue,ElementContainer attackerElementContainer){
-        return (float) (originValue//基础数值
-                *(1 + attackerElementContainer.getMastery())//精通乘区
-                *(1 - this.getBaseResistance())//抗性乘区
-                *(1 + attackerElementContainer.getBonus()));//增伤乘区
-    }
-
-
-
-    /*
     public方法
      */
 
@@ -382,7 +406,9 @@ public class ElementContainer {
         return hasElement.get(c);
     }
 
-
+    public boolean isImmune(Class<? extends EP> eop){
+        return immuneSet.contains(eop);
+    }
 
     /*
     以下为getter&setter
@@ -403,7 +429,6 @@ public class ElementContainer {
         modifiersSet.add(new Modifiers(modifierType));
         return null;
     }
-
 
 
     public boolean isCombustion(){
@@ -438,22 +463,6 @@ public class ElementContainer {
         return (16*getMastery())/(getMastery()+2000);
     }
 
-    public double getBaseBonus(){
-        return bonus;
-    }
-
-    public double getBonus(){
-        return getModifiers(Modifiers.modifierType.BONUS).applyModifiers((float) getBaseBonus());
-    }
-
-    public double getBaseResistance(){
-        return resistance;
-    }
-
-    public double getResistance(){
-        return getModifiers(Modifiers.modifierType.RESISTANCE).applyModifiers((float) getBaseResistance());
-    }
-
 
     /*
     该方法创建的伤害类型为持续反应伤害，此处source是玩家本身，attacker是最后施加元素的生物
@@ -479,5 +488,11 @@ public class ElementContainer {
     }
 
 
+    public ResistancesContainer getResistancesContainer() {
+        return resistancesContainer;
+    }
 
+    public BonusContainer getBonusContainer() {
+        return bonusContainer;
+    }
 }

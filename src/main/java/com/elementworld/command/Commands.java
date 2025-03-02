@@ -38,7 +38,7 @@ public class Commands {
                                             commandContext.getSource().sendMessage(Text.literal("The Mixin error!"));
                                         }
                                         else {
-                                            ElementContainer container = ((LivingEntityHolder) entity).elementWorld$getElementContainer();
+                                            ElementContainer container = ((LivingEntityHolder) entity).getElementContainer$EW();
                                             if(container.isEmpty()){
                                                 commandContext.getSource().sendMessage(Text.literal("The Container is empty!"));
                                             }
@@ -68,7 +68,7 @@ public class Commands {
                                                     }
                                                     else{
                                                         Element.ElementType element = ElementTypeArgumentType.getElement(commandContext,"ElementType");
-                                                        ElementContainer container = ((LivingEntityHolder)((LivingEntityHolder) entity)).elementWorld$getElementContainer();
+                                                        ElementContainer container = ((LivingEntityHolder)((LivingEntityHolder) entity)).getElementContainer$EW();
 
                                                         container.applyElement(
                                                                 Objects.requireNonNull(
