@@ -2,9 +2,11 @@ package com.elementworld.elementComponents;
 
 import com.elementworld.elements.*;
 import net.minecraft.entity.LivingEntity;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 public class BonusContainer {
     /*
@@ -54,6 +56,10 @@ public class BonusContainer {
             }
         }
 
+        public boolean hasBonusInstance(String name){
+            return bonusInstances.containsKey(name) ;
+        }
+
         public double apply(){
             double value = 0;
             for(BonusInstance bonusInstance : bonusInstances.values()){
@@ -86,46 +92,48 @@ public class BonusContainer {
 
     public void addBonus(Class<? extends EP> elementType,double value,String name){
         BonusSet set = judgeBonusSet(elementType);
-        if(set == null){
-            set = new BonusSet(elementType);
-        }
-
         set.addBonus(value, name);
     }
 
     public boolean removeBonus(Class<? extends EP> elementType,String name){
-        BonusSet set = judgeBonusSet(elementType);
-        if(set == null){
-            return false;
-        }
-        else {
-            return set.removeBonus(name);
-        }
+        return judgeBonusSet(elementType).removeBonus(name);
     }
 
-    public double getBonusValue(@Nullable Class<? extends EP> elementType){
-        return judgeBonusSet(elementType).apply();
+    public boolean hasBonus(String name,Class<? extends EP> elementType){
+        return judgeBonusSet(elementType).hasBonusInstance(name);
+    }
+
+
+    public double getBonusValue(@NotNull Class<? extends EP> elementType){
+        return Objects.requireNonNull(judgeBonusSet(elementType)).apply();
     }
 
     private  BonusSet judgeBonusSet(Class<?extends EP> elementType){
+        BonusSet set;
         if (elementType == Hydro.class) {
-            return hydroSet;
+            set = hydroSet;
         } else if (elementType == Pyro.class) {
-            return pyroSet;
+            set = pyroSet;
         } else if (elementType == Anemo.class) {
-            return anemoSet;
+            set = anemoSet;
         } else if (elementType == Cryo.class) {
-            return cryoSet;
+            set = cryoSet;
         } else if (elementType == Dendro.class) {
-            return dendroSet;
+            set = dendroSet;
         } else if (elementType == Electro.class) {
-            return electroSet;
+            set = electroSet;
         } else if (elementType == Geo.class) {
-            return geoSet;
+            set = geoSet;
         } else if (elementType == Physics.class) {
-            return physicsSet;
+            set = physicsSet;
         } else {
-            return null; // 默认处理物理抗性
+            set = physicsSet; // 默认处理物理抗性
+        }
+        if(set == null){
+            set = new BonusSet(elementType);
+            return set;
+        }else {
+            return set;
         }
 
     }

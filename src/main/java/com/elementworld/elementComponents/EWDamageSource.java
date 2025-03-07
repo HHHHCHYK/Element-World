@@ -1,17 +1,21 @@
 package com.elementworld.elementComponents;
 
+import com.elementworld.elements.EP;
 import com.elementworld.elements.Element;
+import com.elementworld.elements.Physics;
 import com.elementworld.interfaces.DamageSourceHolder;
 import net.minecraft.entity.damage.DamageSource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 public class EWDamageSource {
     public @Nullable DamageSourceHolder getDamageSourceHolder() {
         return damageSourceHolder;
     }
 
-    public static enum DAMAGE_TYPE{
+    public enum DAMAGE_TYPE{
         AmpReaction,TraReaction,Dot,Physics
     }
 
@@ -61,5 +65,9 @@ public class EWDamageSource {
 
     public void setDamageType(DAMAGE_TYPE damageType){
         this.damageType = damageType;
+    }
+
+    public Class<?extends EP> getEP(){
+        return Objects.requireNonNullElse(damageElement.getClass(), Physics.class);
     }
 }

@@ -13,11 +13,12 @@ import net.minecraft.entity.damage.DamageSource;
 import java.util.Objects;
 
 public class Combustion extends Reaction{
-    private Pyro pyro;
-    private Dendro dendro;
+    private final Pyro pyro;
+    private final Dendro dendro;
     private FireElement fireElement;
+    public boolean die = false;
 
-    private float damageValue;
+    private final float damageValue;
     private int combustionCD = 5;
 
     public Combustion(LivingEntity owner, DamageSource damageSource, Element firseElement, Element secondELement) {

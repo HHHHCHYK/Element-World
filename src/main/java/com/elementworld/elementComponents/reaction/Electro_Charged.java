@@ -19,6 +19,8 @@ public class Electro_Charged extends Reaction{
 
     private int reactionCD = 20;
 
+    public boolean die = false;
+
     public Electro_Charged(LivingEntity owner,DamageSource damageSource,Element firseElement,Element secondELement){
         super(owner,damageSource,firseElement,secondELement);
         hydro =(Hydro) firseElement;

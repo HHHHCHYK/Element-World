@@ -28,7 +28,7 @@ public class Commands {
         这个命令(Command)用于对实体的元素附着进行操作
     */
     private static LiteralArgumentBuilder<ServerCommandSource> elementCommandBuild(){
-        return (LiteralArgumentBuilder<ServerCommandSource>) CommandManager.literal("element")
+        return CommandManager.literal("element")
                 .requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(2))
                 .then(CommandManager.literal("list")
                         .then(CommandManager.argument("target",EntityArgumentType.entity())
@@ -68,14 +68,14 @@ public class Commands {
                                                     }
                                                     else{
                                                         Element.ElementType element = ElementTypeArgumentType.getElement(commandContext,"ElementType");
-                                                        ElementContainer container = ((LivingEntityHolder)((LivingEntityHolder) entity)).getElementContainer$EW();
+                                                        ElementContainer container = ((LivingEntityHolder) entity).getElementContainer$EW();
 
                                                         container.applyElement(
                                                                 Objects.requireNonNull(
                                                                         Element.create(element,
                                                                                 DoubleArgumentType.getDouble(commandContext, "gauge"))),
                                                                 null);
-                                                        scs.sendMessage(Text.literal("成功添加"+element.toString()));
+                                                        scs.sendMessage(Text.literal("成功添加"+ element));
                                                     }
                                                     return Command.SINGLE_SUCCESS;
                                                 })))));

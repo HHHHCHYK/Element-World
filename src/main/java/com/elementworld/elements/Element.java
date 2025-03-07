@@ -5,10 +5,13 @@ import com.elementworld.ElementContainer;
 import com.elementworld.interfaces.LivingEntityHolder;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 public class Element extends EP {
 
-    public static enum ElementType {
+    public enum ElementType {
         ANEMO,CRYO,DENDRO,ELECTRO,FROZEN,GEO,HYDRO,PYRO,Quicken,Physics
     }
 
@@ -86,7 +89,7 @@ public class Element extends EP {
     }
 
     /*
-    下面是一些功能函数
+    下面是一些功能函数(静态）
      */
 
     //创建一个元素实例
@@ -124,6 +127,12 @@ public class Element extends EP {
             }
         }
     }
+
+    //将元素类转为Element&Physics类
+    public static Class<? extends EP> ToEP(@Nullable Class<?extends Element> element){
+        return Objects.requireNonNullElse(element, Physics.class);
+    }
+
 
     /*
     以下是getter&setter
