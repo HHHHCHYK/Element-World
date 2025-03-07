@@ -128,6 +128,29 @@ public class Element extends EP {
         }
     }
 
+    public static Element create(Class<?extends EP> elementType, double gauge){
+        if (elementType.equals(Geo.class)) {
+            return new Geo(gauge);
+        } else if (elementType.equals(Cryo.class)) {
+            return new Cryo(gauge);
+        } else if (elementType.equals(Pyro.class)) {
+            return new Pyro(gauge);
+        } else if (elementType.equals(Anemo.class)) {
+            return new Anemo(gauge);
+        } else if (elementType.equals(Hydro.class)) {
+            return new Hydro(gauge);
+        } else if (elementType.equals(Dendro.class)) {
+            return new Dendro(gauge);
+        } else if (elementType.equals(Frozen.class)) {
+            return new Frozen(gauge);
+        } else if (elementType.equals(Electro.class)) {
+            return new Electro(gauge);
+        } else if (elementType.equals(Quicken.class)) {
+            return new Quicken(gauge);
+        }
+        return null;
+    }
+
     //将元素类转为Element&Physics类
     public static Class<? extends EP> ToEP(@Nullable Class<?extends Element> element){
         return Objects.requireNonNullElse(element, Physics.class);

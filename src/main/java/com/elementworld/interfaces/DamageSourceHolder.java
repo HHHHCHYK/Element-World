@@ -11,11 +11,11 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.world.World;
 
 public interface DamageSourceHolder {
-    static DamageSource createDamageSource(World world, LivingEntity entity, LivingEntity latestAttacker) {
-        Registry<DamageType> damageTypeRegistry = entity.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE);
+    static DamageSource createDamageSource(World world, LivingEntity source, LivingEntity attacker) {
+        Registry<DamageType> damageTypeRegistry = source.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE);
         DamageType type = damageTypeRegistry.get(ElementWorld.ELEMENT_DAMAGE);
 
-        return new DamageSource(damageTypeRegistry.getEntry(type),entity,latestAttacker);
+        return new DamageSource(damageTypeRegistry.getEntry(type), source,attacker);
     }
 
     Element getElement$EW();

@@ -14,11 +14,13 @@ public abstract class Reaction {
 
     public final float damageValue;
     protected ReactionType reactionType;
+    protected DamageSource damageSource;
 
     public Reaction(LivingEntity owner, DamageSource damageSource, Element firseElement, Element secondELement){
 
         //标定拥有者，施加者，还有参与反应的两个元素实例
         this.owner = owner;
+        this.damageSource = damageSource;
         if(damageSource.getAttacker() instanceof LivingEntity){
             this.attacker =(LivingEntity) damageSource.getAttacker();
         }
@@ -79,7 +81,6 @@ public abstract class Reaction {
     }
 
     public void apply(){
-        System.out.println("Reaction is running!");
     }
 
     public static final ReactionType[] ampReaction= {ReactionType.VAPORIZE,ReactionType.MELT};

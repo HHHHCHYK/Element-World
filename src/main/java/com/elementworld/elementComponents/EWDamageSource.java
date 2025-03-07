@@ -27,6 +27,7 @@ public class EWDamageSource {
 
     private Element damageElement;
     private DAMAGE_TYPE damageType = DAMAGE_TYPE.AmpReaction;
+    private boolean cannotApply = true;
 
     public EWDamageSource(@NotNull DamageSource damageSource){
         originDamageSource = damageSource;
@@ -69,5 +70,17 @@ public class EWDamageSource {
 
     public Class<?extends EP> getEP(){
         return Objects.requireNonNullElse(damageElement.getClass(), Physics.class);
+    }
+
+    public boolean isCannotApply(){
+        return cannotApply;
+    }
+
+    public void setCannotApply(){
+        cannotApply = false;
+    }
+
+    public void resetCannotApply(){
+        cannotApply = true;
     }
 }

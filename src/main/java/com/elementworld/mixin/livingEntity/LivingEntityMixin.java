@@ -3,6 +3,7 @@ package com.elementworld.mixin.livingEntity;
 import com.elementworld.ElementContainer;
 import com.elementworld.elementComponents.reaction.AmpReaction;
 import com.elementworld.elementComponents.reaction.Reaction;
+import com.elementworld.elements.EP;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Physics;
 import com.elementworld.interfaces.DamageSourceHolder;
@@ -78,22 +79,32 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                 if(!ownContainer.isImmune(damageHolder.getEWDamageSource$EW().getEP())){//判断生物是否有对某个元素的免疫
                     Element element = damageHolder.getElement$EW();
                     if(!(element == null)){//如果这次攻击带有元素附着
-                        Reaction reaction = ownContainer.applyElement(element,source);//添加元素，获得反应实例
-                        if(reaction instanceof AmpReaction ampReaction){//如果反应类型为增幅反应
-                            amount = (float) (amount
-                                    *(1+(ampReaction.getReactionBaseMul()))//元素反应增伤
-                                    *AmpReaction.getMasteryAmp(attackerContainer.getMastery())//精通增伤
-                                    *(1+attackerContainer.getBonusValue(Element.ToEP(element.getClass())))//增伤乘区
-                                    *(1-ownContainer.getResistanceValue(Element.ToEP(element.getClass())))//减抗乘区
-                            );
-                        }else{
-                            reaction.apply();//运行一次元素反应内容
-
+                        Reaction reaction = null ;
+                        if(!damageHolder.getEWDamageSource$EW().isCannotApply()){//判断这次反应是否造成元素附着
+                             reaction = ownContainer.applyElement(element,source);//添加元素，获得反应实例
                         }
-                    }else {//处理单纯的物理伤害
+                        if(reaction != null){//如果产生了元素反应
+                            if(reaction instanceof AmpReaction ampReaction){//如果反应类型为增幅反应
+                                amount = (float) (amount
+                                        *(1+(ampReaction.getReactionBaseMul()))//元素反应增伤
+                                        *AmpReaction.getMasteryAmp(attackerContainer.getMastery())//精通增伤
+                                        *(1+attackerContainer.getBonusValue(Element.ToEP(element.getClass())))//增伤乘区
+                                        *(1-ownContainer.getResistanceValue(Element.ToEP(element.getClass())))//减抗乘区
+                                );
+                            }else{
+                                reaction.apply();//运行一次元素反应内容
+                            }
+                        }else{//如果没有产生元素反应
+                            Class<? extends EP> elementType = element.getClass();
+                            amount = (float) (amount
+                                    *(1+attackerContainer.getBonusValue(elementType))
+                                    *(1-ownContainer.getResistanceValue(elementType))
+                            );
+                        }
+                    }else{
                         amount = (float) (amount
                                 *(1+attackerContainer.getBonusValue(Physics.class))
-                        *(1-ownContainer.getResistanceValue(Physics.class))
+                                *(1-ownContainer.getResistanceValue(Physics.class))
                         );
                     }
                 }

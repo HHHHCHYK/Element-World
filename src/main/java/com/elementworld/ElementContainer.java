@@ -16,8 +16,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.text.Text;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -153,7 +151,7 @@ public class ElementContainer {
         }
 
         /*
-
+        检查感电状态和燃烧状态
          */
         if(isElectroCharged){
             Electro_Charged electroCharged =(Electro_Charged) reactions.get(Electro_Charged.class);
@@ -460,19 +458,7 @@ public class ElementContainer {
         }
     }
 
-    /*
-    下面实现超载：
-     超载反应特征：爆炸并且造成伤害
-        先获取容器拥有者的坐标位置和服务器世界实例，
-      然后在坐标位置生成一个有伤害的爆炸
-    */
 
-    private void overload(ElementContainer attackerElementContainer){
-        Vec3d playerPos = owner.getPos();
-        Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
-                .createExplosion(attackerElementContainer.getOwner(), playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
-        owner.damage(createDamageSource(), (float) (3 * (1 + attackerElementContainer.getMasteryBonus())));
-    }
 
     /*
     public方法
