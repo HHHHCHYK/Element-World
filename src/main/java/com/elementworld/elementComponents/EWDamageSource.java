@@ -8,8 +8,6 @@ import net.minecraft.entity.damage.DamageSource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
-
 public class EWDamageSource {
     public @Nullable DamageSourceHolder getDamageSourceHolder() {
         return damageSourceHolder;
@@ -27,7 +25,7 @@ public class EWDamageSource {
 
     private Element damageElement;
     private DAMAGE_TYPE damageType = DAMAGE_TYPE.AmpReaction;
-    private boolean cannotApply = true;
+    private boolean cannotApply = false;
 
     public EWDamageSource(@NotNull DamageSource damageSource){
         originDamageSource = damageSource;
@@ -69,7 +67,11 @@ public class EWDamageSource {
     }
 
     public Class<?extends EP> getEP(){
-        return Objects.requireNonNullElse(damageElement.getClass(), Physics.class);
+        if (damageElement == null) {
+            return Physics.class;
+        }else{
+            return damageElement.getClass();
+        }
     }
 
     public boolean isCannotApply(){

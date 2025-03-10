@@ -42,7 +42,7 @@ public class Element extends EP {
                 return Frozen.class;
             }
             case Quicken -> {
-                return Quicken.class;
+                return Catalyze.class;
             }
             case Physics -> {
                 return Physics.class;
@@ -120,7 +120,7 @@ public class Element extends EP {
                 return new Electro(gauge);
             }
             case Quicken -> {
-                return new Quicken(gauge);
+                return new Catalyze(gauge);
             }
             default -> {
                 return null;
@@ -145,8 +145,8 @@ public class Element extends EP {
             return new Frozen(gauge);
         } else if (elementType.equals(Electro.class)) {
             return new Electro(gauge);
-        } else if (elementType.equals(Quicken.class)) {
-            return new Quicken(gauge);
+        } else if (elementType.equals(Catalyze.class)) {
+            return new Catalyze(gauge);
         }
         return null;
     }

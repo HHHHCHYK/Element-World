@@ -19,7 +19,7 @@ public interface DamageSourceHolder {
     }
 
     Element getElement$EW();
-    DamageSource setDamageElement$EW(Element element);
+    void setDamageElement$EW(Element element);
     void setDamageType$EW(EWDamageSource.DAMAGE_TYPE damageType);
     EWDamageSource getEWDamageSource$EW();
 }

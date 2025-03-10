@@ -25,14 +25,13 @@ public class DamageSourceMixin implements DamageSourceHolder {
     }
 
     @Unique
-    public DamageSource setDamageElement$EW(Element element){
+    public void setDamageElement$EW(Element element){
         if(ewDamageSource != null){
             if(!ewDamageSource.setElement(element)){
                 System.out.println("Set element failed");
             }
         }
 
-        return (DamageSource) (Object) this;
     }
 
     @Unique @Override

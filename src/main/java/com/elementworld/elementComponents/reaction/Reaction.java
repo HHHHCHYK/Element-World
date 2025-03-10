@@ -21,10 +21,14 @@ public abstract class Reaction {
         //标定拥有者，施加者，还有参与反应的两个元素实例
         this.owner = owner;
         this.damageSource = damageSource;
-        if(damageSource.getAttacker() instanceof LivingEntity){
-            this.attacker =(LivingEntity) damageSource.getAttacker();
-        }
-        else {
+        if(damageSource != null){
+            if(damageSource.getAttacker() instanceof LivingEntity){
+                this.attacker =(LivingEntity) damageSource.getAttacker();
+            }
+            else {
+                attacker = null;
+            }
+        }else{
             attacker = null;
         }
 

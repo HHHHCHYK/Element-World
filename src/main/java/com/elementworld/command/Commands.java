@@ -3,6 +3,7 @@ package com.elementworld.command;
 import com.elementworld.ElementContainer;
 import com.elementworld.command.ArgumentTypes.ElementTypeArgumentType;
 import com.elementworld.elements.Element;
+import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
@@ -11,11 +12,10 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
-
-import java.util.Objects;
 
 public class Commands {
 
@@ -70,12 +70,24 @@ public class Commands {
                                                         Element.ElementType element = ElementTypeArgumentType.getElement(commandContext,"ElementType");
                                                         ElementContainer container = ((LivingEntityHolder) entity).getElementContainer$EW();
 
+                                                        /*
                                                         container.applyElement(
                                                                 Objects.requireNonNull(
                                                                         Element.create(element,
                                                                                 DoubleArgumentType.getDouble(commandContext, "gauge"))),
                                                                 null);
+                                                         */
+                                                        if(entity instanceof LivingEntity livingEntity){
+                                                            DamageSource damageSource = DamageSourceHolder.createDamageSource(livingEntity.getWorld(),
+                                                                    livingEntity, null);
+
+                                                            ((DamageSourceHolder)damageSource).getEWDamageSource$EW().setElement(Element.create(
+                                                                    element,
+                                                                    DoubleArgumentType.getDouble(commandContext, "gauge")));
+                                                            livingEntity.damage(damageSource, 2);
+                                                        }
                                                         scs.sendMessage(Text.literal("成功添加"+ element));
+
                                                     }
                                                     return Command.SINGLE_SUCCESS;
                                                 })))));

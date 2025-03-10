@@ -6,6 +6,7 @@ import com.elementworld.elementComponents.modifiers.Modifiers;
 import com.elementworld.elementComponents.reaction.Combustion;
 import com.elementworld.elementComponents.reaction.Electro_Charged;
 import com.elementworld.elementComponents.reaction.Reaction;
+import com.elementworld.elementComponents.shield.Shield;
 import com.elementworld.elements.*;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
@@ -23,6 +24,7 @@ import java.util.*;
 
 public class ElementContainer {
 
+
     /*
     //创建一个类的实例方便调用
     public static final Anemo ANEMO = (Anemo) Element.create(Element.ElementType.ANEMO,0);
@@ -33,7 +35,7 @@ public class ElementContainer {
     public static final Geo GEO = (Geo) Element.create(Element.ElementType.GEO,0);
     public static final Hydro HYDRO = (Hydro) Element.create(Element.ElementType.HYDRO,0);
     public static final Pyro PYRO = (Pyro) Element.create(Element.ElementType.PYRO,0);
-    public static final Quicken QUICKEN = (Quicken) Element.create(Element.ElementType.Quicken,0);
+    public static final Catalyze QUICKEN = (Catalyze) Element.create(Element.ElementType.Catalyze,0);
 
      */
 
@@ -57,6 +59,7 @@ public class ElementContainer {
     private final BonusContainer bonusContainer;//增伤容器
     private final ResistancesContainer resistancesContainer;//抗性容器
     private final HashSet<Class<? extends EP>> immuneSet = new HashSet<>();
+
 
 
     //owner的状态
@@ -141,7 +144,7 @@ public class ElementContainer {
         boolean hasCatalyze = false;
         //将其中元素的状态更新
         for(Element element : elements){
-            if(!hasCatalyze &&element instanceof Quicken){
+            if(!hasCatalyze &&element instanceof Catalyze){
                 hasCatalyze = true;
             }
             hasElement.put(element.getClass(),true);
@@ -220,7 +223,6 @@ public class ElementContainer {
             if (bRElement.getClass() == element.getClass()) {
                 bRElement.setGauge(Math.max(gauge, beGauge));
             }
-
             //如若被添加元素为水元素
             if (element instanceof Hydro) {
                 if (bRElement instanceof Pyro) {//火
@@ -317,36 +319,6 @@ public class ElementContainer {
                 }
                 else if(bRElement instanceof Cryo || bRElement instanceof Frozen){//冰：超导
                     addElement(element);
-                    /*
-                    *
-                    *
-                    这里实现在某个范围内造成一次伤害
-                    *
-                    *
-                    Vec3d pos = getOwner().getPos();
-                    final int range = 5;
-                    List<LivingEntity> entityList = getOwner().getWorld().getEntitiesByClass(
-                            LivingEntity.class,
-                            new Box(pos.x - range,pos.y - range,pos.z - range,pos.x +range,pos.y+range, pos.z + range),
-                            livingEntity -> livingEntity instanceof LivingEntityHolder
-                    );
-                    //下面造成伤害并且降低抗性
-                    Modifier modifier = new Modifier("SuperConductModifier",0.4,240, Modifier.modifierMethod.MULTI);
-                    for(LivingEntity entity : entityList){
-                        if(Calculater.distance(entity.getPos(),getOwner().getPos()) <= 5){
-                            entity.damage(null,0.5f);
-                            if(entity instanceof LivingEntityHolder holder){
-                                holder.getElementContainer$EW()
-                                        .getModifiers(Modifiers.modifierType.RESISTANCE).addModifier(modifier);
-                            }
-                        }
-                    }
-                    getOwner().damage(null,0.5f);
-
-                    this.getModifiers(Modifiers.modifierType.RESISTANCE).addModifier(modifier);
-                    *
-                    *
-                    */
                     return Reaction.create(Reaction.ReactionType.SUPERCONDUCT,owner,damageSource,bRElement,element);
                 }
                 else if(bRElement instanceof Dendro){//激化
@@ -358,9 +330,9 @@ public class ElementContainer {
                     生成激元素
                      */
                     if (damageSource != null) {
-                        elements.add(new Quicken(min,getOwner(),element.getAttacker(),damageSource.getSource()));
+                        elements.add(new Catalyze(min,getOwner(),element.getAttacker(),damageSource.getSource()));
                     }else {
-                        elements.add(new Quicken(min,getOwner(),null,owner));
+                        elements.add(new Catalyze(min,getOwner(),null,owner));
                     }
                     return Reaction.create(Reaction.ReactionType.CATALYZE,owner,damageSource,bRElement,element);
                 }
@@ -411,10 +383,11 @@ public class ElementContainer {
                     生成激元素
                      */
                     if (damageSource != null) {
-                        elements.add(new Quicken(min,getOwner(),element.getAttacker(),damageSource.getSource()));
+                        elements.add(new Catalyze(min,getOwner(),element.getAttacker(),damageSource.getSource()));
                     }else {
-                        elements.add(new Quicken(min,getOwner(),null,owner));
+                        elements.add(new Catalyze(min,getOwner(),null,owner));
                     }
+
                     return Reaction.create(Reaction.ReactionType.CATALYZE,owner,damageSource,bRElement,element);
                 }
             }
@@ -546,6 +519,10 @@ public class ElementContainer {
         return (16*getMastery())/(getMastery()+2000);
     }
 
+    public void setImmune(Class<? extends EP> eop){//设置免疫类型
+        immuneSet.add(eop);
+    }
+
 
     /*
     该方法创建的伤害类型为持续反应伤害，此处source是玩家本身，attacker是最后施加元素的生物
@@ -566,7 +543,6 @@ public class ElementContainer {
 
         DamageSource damageSource = new DamageSource(damageTypeRegistry.getEntry(type),source,attacker);
         target.damage(damageSource,amount);
-
         return damageSource;
     }
 
@@ -577,5 +553,50 @@ public class ElementContainer {
 
     public BonusContainer getBonusContainer() {
         return bonusContainer;
+    }
+
+    //------------------------下面实现护盾运算----------------------------------
+    protected LinkedHashMap<UUID, Shield> shields;
+    private double shiedStrength = 1;
+
+    public double getShiedStrength(){
+        return shiedStrength;
+    }
+
+    public void setShiedStrength(double shiedStrength){
+        this.shiedStrength = shiedStrength;
+    }
+
+    public void addShield(@NotNull Shield shield){
+        if(shields == null){
+            shields = new LinkedHashMap<>();
+        }
+
+
+        if (shields.containsKey(shield.getUuid())) {
+            Shield shield1 = shields.get(shield.getUuid());
+            shield1.recover(shield.getValue());
+        } else {
+            shields.put(shield.getUuid(), shield);
+        }
+    }
+
+    /*
+    该方法用于计算护盾对伤害的抵消
+     */
+    public float applyShield(@Nullable Class<? extends Element> element,float damage){
+        if(shields == null){
+            return 0;
+        }
+        for(Shield shield : shields.values()){
+            if(damage <= 0){
+                return 0;
+            }
+            damage =(float) (shield.apply(damage,element));
+            if(damage <= 0){
+                return 0;
+            }
+        }
+        return damage;
     }
 }
