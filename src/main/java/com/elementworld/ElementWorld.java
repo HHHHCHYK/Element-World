@@ -3,6 +3,7 @@ package com.elementworld;
 import com.elementworld.command.Commands;
 import com.elementworld.command.Hello;
 import com.elementworld.registers.ArgumentType;
+import com.elementworld.registers.ItemRegistry;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.entity.damage.DamageType;
@@ -34,7 +35,11 @@ public class ElementWorld implements ModInitializer {
 
 		LOGGER.info("Hello Fabric world!");
 
-		ArgumentType.register();
+		//注册物品
+		ItemRegistry.registerItems();
+
+
+		ArgumentType.register();//注册自定义参数类型
 
 		/*
 		下面是进行将命令注册到命令分发器的操作，与注册命令的操作区分（消歧义）

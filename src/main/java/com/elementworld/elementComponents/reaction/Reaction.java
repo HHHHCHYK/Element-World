@@ -33,7 +33,15 @@ public abstract class Reaction {
         }
 
         //初始化反应伤害
-        damageValue = (float) (0.6*((1+secondELement.getOwnerContainer().getMasteryBonus())));
+        /*
+        这里需要非空检查
+         */
+        if(secondELement.getOwnerContainer() == null) {
+            damageValue = 0.6f;
+        }
+        else{
+            damageValue = (float) (0.6*((1+secondELement.getOwnerContainer().getMasteryBonus())));
+        }
         this.firstElement = firseElement;
         this.secondElement = secondELement;
     }
@@ -44,6 +52,7 @@ public abstract class Reaction {
 
         //标定拥有者，施加者，还有参与反应的两个元素实例
         this.owner = owner;
+
         if(damageSource.getAttacker() instanceof LivingEntity){
             this.attacker =(LivingEntity) damageSource.getAttacker();
         }

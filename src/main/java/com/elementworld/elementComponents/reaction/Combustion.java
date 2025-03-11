@@ -10,8 +10,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 
-import java.util.Objects;
-
 public class Combustion extends Reaction{
     private final Pyro pyro;
     private final Dendro dendro;
@@ -23,11 +21,29 @@ public class Combustion extends Reaction{
 
     public Combustion(LivingEntity owner, DamageSource damageSource, Element firseElement, Element secondELement) {
         super(owner, damageSource, firseElement, secondELement);
-        pyro =(Pyro) firseElement;
-        dendro =(Dendro) secondELement;
+        if(firseElement instanceof Pyro){
+            pyro = (Pyro) firseElement;
+            dendro = (Dendro) secondELement;
+        }
+        else{
+            pyro = (Pyro) secondELement;
+            dendro = (Dendro) firseElement;
+        }
 
-        ElementContainer container = ((LivingEntityHolder) Objects.requireNonNull(damageSource.getAttacker())).getElementContainer$EW();
-        damageValue = (float) (1*(1+(container.getMasteryBonus())));
+        ElementContainer container;
+        if(damageSource != null && damageSource.getAttacker() != null){
+            container = ((LivingEntityHolder)damageSource.getAttacker()).getElementContainer$EW();
+            if(container != null){
+                damageValue = (float) (1*(1+(container.getMasteryBonus())));
+            }
+            else{
+                damageValue = 1;
+            }
+        }
+        else{
+            damageValue = 1;
+        }
+
     }
 
     public void tick(){
@@ -50,6 +66,8 @@ public class Combustion extends Reaction{
             if(!fireElement.isDie){
                 //下面设立一个
                 DamageSource damageSource = DamageSourceHolder.createDamageSource(owner.getWorld(),owner,attacker);
+                ((DamageSourceHolder)damageSource).getEWDamageSource$EW().setElement(pyro);//此次伤害是火元素伤害
+                ((DamageSourceHolder)damageSource).getEWDamageSource$EW().setCannotApply();
                 owner.damage(damageSource,damageValue);//对拥有者造成伤害
             }
         }

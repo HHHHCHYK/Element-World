@@ -68,7 +68,6 @@ public class Commands {
                                                     }
                                                     else{
                                                         Element.ElementType element = ElementTypeArgumentType.getElement(commandContext,"ElementType");
-                                                        ElementContainer container = ((LivingEntityHolder) entity).getElementContainer$EW();
 
                                                         /*
                                                         container.applyElement(
@@ -84,7 +83,7 @@ public class Commands {
                                                             ((DamageSourceHolder)damageSource).getEWDamageSource$EW().setElement(Element.create(
                                                                     element,
                                                                     DoubleArgumentType.getDouble(commandContext, "gauge")));
-                                                            livingEntity.damage(damageSource, 2);
+                                                            livingEntity.damage(damageSource, 0.1f);
                                                         }
                                                         scs.sendMessage(Text.literal("成功添加"+ element));
 

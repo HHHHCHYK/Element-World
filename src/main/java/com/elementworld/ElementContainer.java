@@ -10,13 +10,18 @@ import com.elementworld.elementComponents.shield.Shield;
 import com.elementworld.elements.*;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
+import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,7 +57,7 @@ public class ElementContainer {
     private int displayRateCD = 0;
 
     //正常生存可以调整的模式
-    public boolean displayElement = false;//是否显示元素（这里应该是是否显示图标，与上方debug模式作区分）
+    public boolean displayElement = true;//是否显示元素（这里应该是是否显示图标，与上方debug模式作区分）
 
     //owner的各类属性
     private double mastery;//元素精通
@@ -157,6 +162,9 @@ public class ElementContainer {
         检查感电状态和燃烧状态
          */
         if(isElectroCharged){
+            if(reactions == null){
+                reactions = new HashMap<>();
+            }
             Electro_Charged electroCharged =(Electro_Charged) reactions.get(Electro_Charged.class);
             if(electroCharged != null){
                 if(electroCharged.die){
@@ -168,6 +176,9 @@ public class ElementContainer {
             }
         }
         if(isCombustion){
+            if(reactions == null){
+                reactions = new HashMap<>();
+            }
             Combustion combustion = (Combustion) reactions.get(Combustion.class);
             if(combustion != null){
                 if(combustion.die){
@@ -177,6 +188,19 @@ public class ElementContainer {
                     combustion.tick();
                 }
             }
+        }
+
+        //------------------下面向客户端发送元素信息--------------------------------
+        if(displayElement && owner instanceof ServerPlayerEntity player){
+            PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());//创建一个数据包
+
+            int size = elements.size();
+            buf.writeInt(size);
+            for(Element element : elements){
+                buf.writeString(element.toString());
+            }
+
+            ServerPlayNetworking.send(player,new Identifier(ElementWorld.MOD_ID,"element_types"),buf);
         }
     }
 
@@ -313,6 +337,9 @@ public class ElementContainer {
                     if(!isElectroCharged){
                         isElectroCharged = true;
                         Reaction reaction = Reaction.create(Reaction.ReactionType.ELECTRO_CHARGED,owner,damageSource,bRElement,element);
+                        if(reactions == null){
+                            reactions = new HashMap<>();
+                        }
                         reactions.put(Electro_Charged.class,reaction);
                         return reaction;
                     }

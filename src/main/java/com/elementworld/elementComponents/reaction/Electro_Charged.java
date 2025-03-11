@@ -23,13 +23,20 @@ public class Electro_Charged extends Reaction{
 
     public Electro_Charged(LivingEntity owner,DamageSource damageSource,Element firseElement,Element secondELement){
         super(owner,damageSource,firseElement,secondELement);
-        hydro =(Hydro) firseElement;
-        electro =(Electro) secondELement;
+        if(firseElement instanceof Hydro){
+            hydro = (Hydro) firseElement;
+            electro = (Electro) secondELement;
+        }
+        else{
+            hydro = (Hydro) secondELement;
+            electro = (Electro) firseElement;
+        }
     }
 
     public void tick(){
-        if(hydro.getGauge()<=0 && electro.getGauge() <= 0){
+        if(hydro.getGauge()<=0 || electro.getGauge() <= 0){
             die = true;
+            System.out.println("die");
             return;
         }
         if(reactionCD > 0){
@@ -54,6 +61,7 @@ public class Electro_Charged extends Reaction{
                     livingEntity.damage(reactionDamage,damageValue);
                 }
             }
+            reactionCD = 20;
         }
         else{
             reactionCD = 20;
