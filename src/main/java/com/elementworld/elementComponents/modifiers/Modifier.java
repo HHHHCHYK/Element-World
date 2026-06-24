@@ -43,6 +43,18 @@ public class Modifier {
         return name;
     }
 
+    public double getValue() {
+        return value;
+    }
+
+    public ModifierMethod getMethod() {
+        return method;
+    }
+
+    public int getDuration() {
+        return duration;
+    }
+
     public UUID getModifierUUID() {
         return modifierUUID;
     }

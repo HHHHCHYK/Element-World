@@ -8,6 +8,7 @@ import com.elementworld.elements.Element;
 import com.elementworld.elements.Physics;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
+import com.elementworld.persistence.ElementContainerNbtCodec;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
@@ -65,6 +66,18 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
             elementContainer = new ElementContainer((LivingEntity) (Object) this);
         }
         return elementContainer;
+    }
+
+    @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
+    private void writeElementWorldData(NbtCompound nbt, CallbackInfo info) {
+        if (elementContainer != null) {
+            ElementContainerNbtCodec.writeToEntityNbt(elementContainer, nbt);
+        }
+    }
+
+    @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
+    private void readElementWorldData(NbtCompound nbt, CallbackInfo info) {
+        ElementContainerNbtCodec.readFromEntityNbt(getElementContainer$EW(), nbt);
     }
 
 
@@ -209,5 +222,4 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
         args.set(1, amount);
     }
 }
-
 

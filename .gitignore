@@ -37,3 +37,9 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# Local environment and logs
+.env
+.env.*
+*.log
+logs/

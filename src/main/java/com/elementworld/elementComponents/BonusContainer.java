@@ -13,7 +13,9 @@ import com.elementworld.elements.Pyro;
 import net.minecraft.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class BonusContainer {
@@ -74,6 +76,18 @@ public class BonusContainer {
 
     public LivingEntity getOwner() {
         return owner;
+    }
+
+    public List<BonusInstance> getBonusInstances() {
+        List<BonusInstance> instances = new ArrayList<>();
+        for (BonusSet bonusSet : bonusSets.values()) {
+            instances.addAll(bonusSet.bonusInstances.values());
+        }
+        return instances;
+    }
+
+    public void clear() {
+        bonusSets.clear();
     }
 
     private BonusSet getBonusSet(Class<? extends EP> elementType) {

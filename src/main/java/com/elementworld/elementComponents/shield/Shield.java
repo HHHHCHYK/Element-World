@@ -69,6 +69,10 @@ public class Shield {
         this.value -= value;
     }
 
+    public void setValue(double value) {
+        this.value = Math.max(0, Math.min(value, maxValue));
+    }
+
     public boolean isDie(){
         return value <= 0;
     }
@@ -82,6 +86,10 @@ public class Shield {
 
     public double getValue(){
         return value;
+    }
+
+    public double getMaxValue() {
+        return maxValue;
     }
 
     public UUID getUuid(){

@@ -19,9 +19,6 @@
     ],
     "client": [
       "com.elementworld.ElementWorldClient"
-    ],
-    "fabric-datagen": [
-      "com.elementworld.ElementWorldDataGenerator"
     ]
   },
   "mixins": [

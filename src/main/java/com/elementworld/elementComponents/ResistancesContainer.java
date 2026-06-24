@@ -13,7 +13,9 @@ import com.elementworld.elements.Pyro;
 import net.minecraft.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ResistancesContainer {
@@ -66,6 +68,18 @@ public class ResistancesContainer {
 
     public LivingEntity getOwner() {
         return owner;
+    }
+
+    public List<ResistanceInstance> getResistanceInstances() {
+        List<ResistanceInstance> instances = new ArrayList<>();
+        for (ResistanceSet resistanceSet : resistanceSets.values()) {
+            instances.addAll(resistanceSet.resistanceInstances.values());
+        }
+        return instances;
+    }
+
+    public void clear() {
+        resistanceSets.clear();
     }
 
     private ResistanceSet getResistanceSet(@Nullable Class<? extends EP> elementType) {

@@ -2,6 +2,7 @@ package com.elementworld;
 
 import com.elementworld.elementComponents.BonusContainer;
 import com.elementworld.elementComponents.ResistancesContainer;
+import com.elementworld.elementComponents.modifiers.Modifier;
 import com.elementworld.elementComponents.modifiers.Modifiers;
 import com.elementworld.elementComponents.reaction.Combustion;
 import com.elementworld.elementComponents.reaction.ElectroCharged;
@@ -20,6 +21,7 @@ import com.elementworld.elements.Hydro;
 import com.elementworld.elements.Pyro;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
+import com.elementworld.persistence.ElementContainerState;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.LivingEntity;
@@ -39,6 +41,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.UUID;
 
 public class ElementContainer {
@@ -451,11 +454,164 @@ public class ElementContainer {
         }
     }
 
+    private void rebuildElementState() {
+        hasElement = new HashMap<>();
+        isWet = false;
+        isCatalyze = false;
+        for (Element element : elements) {
+            hasElement.put(element.getClass(), true);
+            if (element instanceof Hydro) {
+                isWet = true;
+            }
+            if (element instanceof Catalyze) {
+                isCatalyze = true;
+            }
+        }
+    }
+
+    private void clearRuntimeReactionState() {
+        latestAttacker = null;
+        reactions = null;
+        isCombustion = false;
+        isElectroCharged = false;
+    }
+
 
 
     /*
     public方法
      */
+
+    public ElementContainerState toPersistentState() {
+        List<ElementContainerState.ElementEntry> elementEntries = new ArrayList<>();
+        for (Element element : elements) {
+            Element.ElementType elementType = Element.typeOfElementClass(element.getClass());
+            if (elementType != null) {
+                elementEntries.add(new ElementContainerState.ElementEntry(elementType, element.getGauge()));
+            }
+        }
+
+        List<Class<? extends EP>> immuneElements = new ArrayList<>(immuneSet);
+
+        List<ElementContainerState.BonusEntry> bonusEntries = new ArrayList<>();
+        for (BonusContainer.BonusInstance bonus : bonusContainer.getBonusInstances()) {
+            bonusEntries.add(new ElementContainerState.BonusEntry(
+                    bonus.elementType(),
+                    bonus.bonusValue(),
+                    bonus.name()
+            ));
+        }
+
+        List<ElementContainerState.ResistanceEntry> resistanceEntries = new ArrayList<>();
+        for (ResistancesContainer.ResistanceInstance resistance : resistancesContainer.getResistanceInstances()) {
+            resistanceEntries.add(new ElementContainerState.ResistanceEntry(
+                    resistance.elementType(),
+                    resistance.resistanceValue(),
+                    resistance.name()
+            ));
+        }
+
+        List<ElementContainerState.ModifierGroup> modifierGroups = new ArrayList<>();
+        if (modifiersSet != null) {
+            for (Modifiers modifiers : modifiersSet) {
+                List<ElementContainerState.ModifierEntry> modifierEntries = new ArrayList<>();
+                for (Modifier modifier : modifiers.getModifiers()) {
+                    if (!modifier.isDie()) {
+                        modifierEntries.add(new ElementContainerState.ModifierEntry(
+                                modifier.getName(),
+                                modifier.getValue(),
+                                modifier.getDuration(),
+                                modifier.getMethod()
+                        ));
+                    }
+                }
+                modifierGroups.add(new ElementContainerState.ModifierGroup(modifiers.getType(), modifierEntries));
+            }
+        }
+
+        List<ElementContainerState.ShieldEntry> shieldEntries = new ArrayList<>();
+        if (shields != null) {
+            for (Shield shield : shields.values()) {
+                if (!shield.isDie()) {
+                    shieldEntries.add(new ElementContainerState.ShieldEntry(
+                            shield.getName(),
+                            shield.getValue(),
+                            shield.getMaxValue(),
+                            shield.getElement()
+                    ));
+                }
+            }
+        }
+
+        return new ElementContainerState(
+                elementEntries,
+                mastery,
+                displayElement,
+                shieldStrength,
+                immuneElements,
+                bonusEntries,
+                resistanceEntries,
+                modifierGroups,
+                shieldEntries
+        );
+    }
+
+    public void loadPersistentState(ElementContainerState state) {
+        elements.clear();
+        deadElements.clear();
+        clearRuntimeReactionState();
+
+        for (ElementContainerState.ElementEntry elementEntry : state.elements()) {
+            Element element = Element.create(elementEntry.type(), elementEntry.gauge());
+            if (element != null) {
+                element.bindOwner(owner);
+                elements.add(element);
+            }
+        }
+
+        mastery = state.mastery();
+        displayElement = state.displayElement();
+        shieldStrength = state.shieldStrength();
+
+        immuneSet.clear();
+        immuneSet.addAll(state.immuneElements());
+
+        bonusContainer.clear();
+        for (ElementContainerState.BonusEntry bonus : state.bonuses()) {
+            bonusContainer.addBonus(bonus.elementType(), bonus.value(), bonus.name());
+        }
+
+        resistancesContainer.clear();
+        for (ElementContainerState.ResistanceEntry resistance : state.resistances()) {
+            resistancesContainer.addResistance(resistance.elementType(), resistance.value(), resistance.name());
+        }
+
+        modifiersSet = null;
+        for (ElementContainerState.ModifierGroup modifierGroup : state.modifiers()) {
+            Modifiers modifiers = getModifiers(modifierGroup.type());
+            for (ElementContainerState.ModifierEntry modifierEntry : modifierGroup.entries()) {
+                modifiers.addModifier(new Modifier(
+                        modifierEntry.name(),
+                        modifierEntry.value(),
+                        modifierEntry.duration(),
+                        modifierEntry.method()
+                ));
+            }
+        }
+
+        shields = null;
+        for (ElementContainerState.ShieldEntry shieldEntry : state.shields()) {
+            Shield shield = shieldEntry.elementType() == null
+                    ? new Shield(shieldEntry.name(), owner, shieldEntry.maxValue())
+                    : new Shield(shieldEntry.name(), owner, shieldEntry.maxValue(), shieldEntry.elementType());
+            shield.setValue(shieldEntry.value());
+            addShield(shield);
+        }
+
+        rebuildElementState();
+        // Loaded attached elements are passive state; continuous reactions must be created by future gameplay.
+        clearRuntimeReactionState();
+    }
 
     public boolean isEmpty(){
         return elements.isEmpty();

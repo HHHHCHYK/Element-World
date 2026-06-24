@@ -60,6 +60,55 @@ public class Element extends EP {
         };
     }
 
+    @Nullable
+    public static Class<? extends Element> elementClassOf(ElementType elementType) {
+        return switch (elementType) {
+            case ELECTRO -> Electro.class;
+            case PYRO -> Pyro.class;
+            case HYDRO -> Hydro.class;
+            case CRYO -> Cryo.class;
+            case ANEMO -> Anemo.class;
+            case GEO -> Geo.class;
+            case DENDRO -> Dendro.class;
+            case FROZEN -> Frozen.class;
+            case QUICKEN -> Catalyze.class;
+            case PHYSICS -> null;
+        };
+    }
+
+    @Nullable
+    public static ElementType typeOfEpClass(@Nullable Class<? extends EP> elementType) {
+        if (elementType == null || elementType == Physics.class) {
+            return ElementType.PHYSICS;
+        }
+        if (elementType == Geo.class) {
+            return ElementType.GEO;
+        } else if (elementType == Cryo.class) {
+            return ElementType.CRYO;
+        } else if (elementType == Pyro.class) {
+            return ElementType.PYRO;
+        } else if (elementType == Anemo.class) {
+            return ElementType.ANEMO;
+        } else if (elementType == Hydro.class) {
+            return ElementType.HYDRO;
+        } else if (elementType == Dendro.class) {
+            return ElementType.DENDRO;
+        } else if (elementType == Frozen.class) {
+            return ElementType.FROZEN;
+        } else if (elementType == Electro.class) {
+            return ElementType.ELECTRO;
+        } else if (elementType == Catalyze.class) {
+            return ElementType.QUICKEN;
+        }
+        return null;
+    }
+
+    @Nullable
+    public static ElementType typeOfElementClass(@Nullable Class<? extends Element> elementType) {
+        ElementType type = typeOfEpClass(elementType);
+        return type == ElementType.PHYSICS ? null : type;
+    }
+
     public static Element create(ElementType elementType, double gauge) {
         return switch (elementType) {
             case GEO -> new Geo(gauge);
@@ -128,6 +177,17 @@ public class Element extends EP {
 
     public void setOwner(LivingEntity owner) {
         this.owner = owner;
+        if (owner instanceof LivingEntityHolder holder) {
+            ownerContainer = holder.getElementContainer$EW();
+        } else {
+            ownerContainer = null;
+        }
+    }
+
+    public void bindOwner(LivingEntity owner) {
+        setOwner(owner);
+        attacker = null;
+        source = null;
     }
 
     public LivingEntity getOwner() {
