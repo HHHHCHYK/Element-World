@@ -1,6 +1,5 @@
 package com.elementworld.elementComponents.reaction;
 
-import com.elementworld.ElementContainer;
 import com.elementworld.elements.Dendro;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Pyro;
@@ -16,34 +15,19 @@ public class Combustion extends Reaction{
     private FireElement fireElement;
     public boolean die = false;
 
-    private final float damageValue;
     private int combustionCD = 5;
 
-    public Combustion(LivingEntity owner, DamageSource damageSource, Element firseElement, Element secondELement) {
-        super(owner, damageSource, firseElement, secondELement);
-        if(firseElement instanceof Pyro){
-            pyro = (Pyro) firseElement;
-            dendro = (Dendro) secondELement;
+    public Combustion(LivingEntity owner, DamageSource damageSource, Element firstElement, Element secondElement) {
+        super(owner, damageSource, firstElement, secondElement);
+        if(firstElement instanceof Pyro){
+            pyro = (Pyro) firstElement;
+            dendro = (Dendro) secondElement;
         }
         else{
-            pyro = (Pyro) secondELement;
-            dendro = (Dendro) firseElement;
+            pyro = (Pyro) secondElement;
+            dendro = (Dendro) firstElement;
         }
-
-        ElementContainer container;
-        if(damageSource != null && damageSource.getAttacker() != null){
-            container = ((LivingEntityHolder)damageSource.getAttacker()).getElementContainer$EW();
-            if(container != null){
-                damageValue = (float) (1*(1+(container.getMasteryBonus())));
-            }
-            else{
-                damageValue = 1;
-            }
-        }
-        else{
-            damageValue = 1;
-        }
-
+        //反应伤害已在父类构造函数中依据 attacker 容器的精通加成计算完毕,这里无需重复计算
     }
 
     public void tick(){

@@ -5,7 +5,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 
 public class Crystallize extends Reaction{
-    public Crystallize(LivingEntity owner, DamageSource damageSource, Element firseElement, Element secondELement) {
-        super(owner, damageSource, firseElement, secondELement);
+    public Crystallize(LivingEntity owner, DamageSource damageSource, Element firstElement, Element secondElement) {
+        super(owner, damageSource, firstElement, secondElement);
     }
 }

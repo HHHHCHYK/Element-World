@@ -1,7 +1,8 @@
 package com.elementworld.elementComponents.reaction;
 
-import com.elementworld.Calculater;
+import com.elementworld.Calculator;
 import com.elementworld.ElementContainer;
+import com.elementworld.ElementWorld;
 import com.elementworld.elementComponents.modifiers.Modifier;
 import com.elementworld.elementComponents.modifiers.Modifiers;
 import com.elementworld.elements.Electro;
@@ -20,8 +21,8 @@ import java.util.Objects;
 
 public class TFReaction extends Reaction{
 
-    public TFReaction(ReactionType reactionType, LivingEntity owner, DamageSource damageSource, Element firseElement, Element secondELement) {
-        super(reactionType, owner, damageSource, firseElement, secondELement);
+    public TFReaction(ReactionType reactionType, LivingEntity owner, DamageSource damageSource, Element firstElement, Element secondElement) {
+        super(reactionType, owner, damageSource, firstElement, secondElement);
     }
 
     /*
@@ -29,7 +30,10 @@ public class TFReaction extends Reaction{
      */
     public void apply(){
         //获取攻击者元素反应容器
-        ElementContainer attackerElementContainer = ((LivingEntityHolder) Objects.requireNonNull(damageSource.getAttacker())).getElementContainer$EW();
+        ElementContainer attackerElementContainer = null;
+        if(attacker instanceof LivingEntityHolder livingEntityHolder){
+            attackerElementContainer = livingEntityHolder.getElementContainer$EW();
+        }
         ElementContainer ownerElementContainer = ((LivingEntityHolder)owner).getElementContainer$EW();
 
         switch (reactionType){
@@ -44,7 +48,8 @@ public class TFReaction extends Reaction{
                 }
                 Vec3d playerPos = owner.getPos();
                 Objects.requireNonNull(Objects.requireNonNull(owner.getServer()).getWorld(owner.getWorld().getRegistryKey()))
-                        .createExplosion(attackerElementContainer.getOwner(), playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
+                        .createExplosion(attackerElementContainer != null ? attackerElementContainer.getOwner() : null,
+                                playerPos.x, playerPos.y + owner.getHeight()/2, playerPos.z, 1, World.ExplosionSourceType.NONE);
 
                 DamageSourceHolder damageSourceHolder =(DamageSourceHolder) DamageSourceHolder.createDamageSource(owner.getWorld(),owner,attacker);
                 damageSourceHolder.setDamageElement$EW(pyro);//这次攻击的元素类型为火元素
@@ -61,22 +66,30 @@ public class TFReaction extends Reaction{
                         livingEntity -> livingEntity instanceof LivingEntityHolder
                 );
                 //下面造成伤害并且降低抗性
-                Modifier modifier = new Modifier("SuperConductModifier",0.4,240, Modifier.modifierMethod.MULTI);//创建一个修改器实例
+                Modifier modifier = new Modifier("SuperConductModifier",0.4,240, Modifier.ModifierMethod.MULTI);//创建一个修改器实例
+                //超导为冰元素伤害，且不造成元素附着
+                DamageSource superConductSource = DamageSourceHolder.createDamageSource(owner.getWorld(), owner, attacker);
+                ((DamageSourceHolder) superConductSource).setDamageElement$EW(Element.create(Element.ElementType.CRYO, 0));
+                ((DamageSourceHolder) superConductSource).getEWDamageSource$EW().setCannotApply();
+
                 for(LivingEntity entity : entityList){//遍历范围内的所有生物
-                    if(Calculater.distance(entity.getPos(),owner.getPos()) <= 5){
-                        entity.damage(null,0.5f);
+                    if(entity == owner){
+                        continue;//owner 在下方单独处理，避免重复结算
+                    }
+                    if(Calculator.distance(entity.getPos(),owner.getPos()) <= 5){
+                        entity.damage(superConductSource,0.5f);
                         if(entity instanceof LivingEntityHolder holder){
                             holder.getElementContainer$EW()
-                                    .getModifiers(Modifiers.modifierType.RESISTANCE).addModifier(modifier);
+                                    .getModifiers(Modifiers.ModifierType.RESISTANCE).addModifier(modifier);
                         }
                     }
                 }
                 //对本身也造成伤害并降低抗性
-                owner.damage(null,0.5f);
-                ownerElementContainer.getModifiers(Modifiers.modifierType.RESISTANCE).addModifier(modifier);
+                owner.damage(superConductSource,0.5f);
+                ownerElementContainer.getModifiers(Modifiers.ModifierType.RESISTANCE).addModifier(modifier);
             }
             default -> {
-                System.out.println("Full Reaction.");
+                ElementWorld.LOGGER.warn("Unhandled transformative reaction: {}", reactionType);
             }
         }
     }

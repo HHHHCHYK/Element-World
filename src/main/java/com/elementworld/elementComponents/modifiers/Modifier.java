@@ -1,53 +1,44 @@
 package com.elementworld.elementComponents.modifiers;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 public class Modifier {
-    public enum modifierMethod{
-        ADD,MULTI
+    public enum ModifierMethod {
+        ADD,
+        MULTI
     }
 
-    //名称
     private final String name;
-    //修改值
     private final double value;
-    //持续时间
+    private final ModifierMethod method;
+    private final UUID modifierUUID;
     private int duration;
-    //修改方法
-    private final modifierMethod method;
-    //UUID
-    UUID modifierUUID;
+    private boolean die = false;
 
-    private boolean isDie = false;
-
-    //构造方法
-    public Modifier(String name, double value,int duration, modifierMethod method){
+    public Modifier(String name, double value, int duration, ModifierMethod method) {
         this.name = name;
         this.method = method;
         this.value = value;
         this.duration = duration;
-        modifierUUID = UUID.nameUUIDFromBytes(name.getBytes());
+        modifierUUID = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8));
     }
 
-    public void tick(){
-        if(duration>0){
+    public void tick() {
+        if (duration > 0) {
             duration--;
-        }
-        else {
-            isDie = true;
-        }
-    }
-
-    //应用修改器
-    public float apply(float base_amount){
-        switch (method){
-            case ADD -> {return base_amount + (float) value;}
-            case MULTI -> {return base_amount * (float) value;}
-            default -> {return 1;}
+        } else {
+            die = true;
         }
     }
 
-    //getter & setter
+    public float apply(float baseAmount) {
+        return switch (method) {
+            case ADD -> baseAmount + (float) value;
+            case MULTI -> baseAmount * (float) value;
+        };
+    }
+
     public String getName() {
         return name;
     }
@@ -56,7 +47,7 @@ public class Modifier {
         return modifierUUID;
     }
 
-    public boolean isDie(){
-        return isDie;
+    public boolean isDie() {
+        return die;
     }
 }

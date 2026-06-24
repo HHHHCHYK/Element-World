@@ -6,7 +6,7 @@ import net.minecraft.entity.damage.DamageSource;
 
 public class Catalyze extends Reaction{
 
-    public Catalyze(ReactionType reactionType, LivingEntity owner, DamageSource damageSource, Element firseElement, Element secondELement) {
-        super(reactionType, owner, damageSource, firseElement, secondELement);
+    public Catalyze(ReactionType reactionType, LivingEntity owner, DamageSource damageSource, Element firstElement, Element secondElement) {
+        super(reactionType, owner, damageSource, firstElement, secondElement);
     }
 }

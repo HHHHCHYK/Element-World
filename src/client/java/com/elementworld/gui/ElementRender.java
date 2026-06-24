@@ -1,95 +1,71 @@
 package com.elementworld.gui;
 
 import com.elementworld.ElementWorld;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
+import java.util.List;
 
+public final class ElementRender {
+    private static final int ICON_SIZE = 16;
+    private static final List<String> elements = new ArrayList<>();
 
-public class ElementRender {
-
-    public static ArrayList<String> elements = new ArrayList<>();
-    private static int perSecond = 0;
+    private ElementRender() {
+    }
 
     public static void renderElement() {
-        System.out.println("Rendering Element");
-        HudRenderCallback.EVENT.register(((drawContext, tickDelta) -> {
+        registerElementReceiver();
+        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
             MinecraftClient client = MinecraftClient.getInstance();
-            if(client.player == null) return;//判断客户端的玩家是否为空（意外判断）
-            //-----------------渲染HUD-----------------
-
-            ClientPlayNetworking.registerGlobalReceiver(
-                    new Identifier(ElementWorld.MOD_ID,"element_types"),
-                    (client1, handler, buf, responseSender) -> {
-                        System.out.println("Received element types");
-                        if(client1.player != null){
-                            int size = buf.readInt();
-                            for(int i = 0; i < size; i++){
-                                elements.add(buf.readString());
-                            }
-                        }
-                    }
-            );
-            //上面接受服务端数据包以渲染HUD
-
-            if((perSecond++) % 10 == 0){
-                if(elements.isEmpty()) return;//如果没有元素就不渲染
-                int size = elements.size();
-
-                int screenWidth = client.getWindow().getScaledWidth();
-                int screenHeight = client.getWindow().getScaledHeight();
-                int centerX = screenWidth / 2;
-                int y = screenHeight - 54;
-                int pos = centerX - (size * 8);
-                for(int i = 0; i < size; i++){
-                    Identifier elementTexture;
-                    switch (elements.get(i)){
-                        case "Anemo":{
-                            elementTexture = new Identifier(ElementWorld.MOD_ID,"textures/element/anemo.png");
-                            break;
-                        }
-                        case "Geo": {
-                            elementTexture = new Identifier(ElementWorld.MOD_ID, "textures/element/geo.png");
-                            break;
-                        }
-                        case "Electro": {
-                            elementTexture = new Identifier(ElementWorld.MOD_ID, "textures/element/electro.png");
-                            break;
-                        }
-                        case "Hydro": {
-                            elementTexture = new Identifier(ElementWorld.MOD_ID, "textures/element/hydro.png");
-                            break;
-                        }
-                        case "Pyro": {
-                            elementTexture = new Identifier(ElementWorld.MOD_ID, "textures/element/pyro.png");
-                            break;
-                        }
-                        case "Cryo": {
-                            elementTexture = new Identifier(ElementWorld.MOD_ID, "textures/element/cryo.png");
-                            break;
-                        }
-                        case "Dendro": {
-                            elementTexture = new Identifier(ElementWorld.MOD_ID, "textures/element/dendro.png");
-                            break;
-                        }
-                        default:
-                            elementTexture = new Identifier(ElementWorld.MOD_ID,"none");
-                            break;
-                    }
-                    RenderSystem.setShaderTexture(0, elementTexture);
-                    drawContext.drawTexture(elementTexture,pos,y,0,0,16,16,16,16);
-                    pos += 16;
-                }
-                elements.clear();
+            if (client.player == null || elements.isEmpty()) {
+                return;
             }
 
+            List<String> snapshot = List.copyOf(elements);
+            int screenWidth = client.getWindow().getScaledWidth();
+            int screenHeight = client.getWindow().getScaledHeight();
+            int x = (screenWidth - snapshot.size() * ICON_SIZE) / 2;
+            int y = screenHeight - 54;
 
+            for (String element : snapshot) {
+                drawContext.fill(x, y, x + ICON_SIZE, y + ICON_SIZE, colorFor(element));
+                drawContext.drawBorder(x, y, ICON_SIZE, ICON_SIZE, 0xAA000000);
+                x += ICON_SIZE;
+            }
+        });
+    }
 
-            //上面为渲染HUD回调
-        }));
+    private static void registerElementReceiver() {
+        ClientPlayNetworking.registerGlobalReceiver(
+                ElementWorld.ELEMENT_TYPES_PACKET_ID,
+                (client, handler, buf, responseSender) -> {
+                    int size = buf.readInt();
+                    List<String> receivedElements = new ArrayList<>(size);
+                    for (int i = 0; i < size; i++) {
+                        receivedElements.add(buf.readString());
+                    }
+                    client.execute(() -> {
+                        elements.clear();
+                        elements.addAll(receivedElements);
+                    });
+                }
+        );
+    }
+
+    private static int colorFor(String element) {
+        return switch (element) {
+            case "Anemo" -> 0xFF63E6BE;
+            case "Geo" -> 0xFFE3B341;
+            case "Electro" -> 0xFFB783FF;
+            case "Hydro" -> 0xFF48C6FF;
+            case "Pyro" -> 0xFFFF5A3C;
+            case "Cryo" -> 0xFF9DEBFF;
+            case "Dendro" -> 0xFF6BD65A;
+            case "Frozen" -> 0xFFB7F4FF;
+            case "Catalyze" -> 0xFFB6F15F;
+            default -> 0xFFFFFFFF;
+        };
     }
 }

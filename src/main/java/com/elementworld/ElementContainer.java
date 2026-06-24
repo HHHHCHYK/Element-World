@@ -4,10 +4,20 @@ import com.elementworld.elementComponents.BonusContainer;
 import com.elementworld.elementComponents.ResistancesContainer;
 import com.elementworld.elementComponents.modifiers.Modifiers;
 import com.elementworld.elementComponents.reaction.Combustion;
-import com.elementworld.elementComponents.reaction.Electro_Charged;
+import com.elementworld.elementComponents.reaction.ElectroCharged;
 import com.elementworld.elementComponents.reaction.Reaction;
 import com.elementworld.elementComponents.shield.Shield;
-import com.elementworld.elements.*;
+import com.elementworld.elements.Anemo;
+import com.elementworld.elements.Catalyze;
+import com.elementworld.elements.Cryo;
+import com.elementworld.elements.Dendro;
+import com.elementworld.elements.EP;
+import com.elementworld.elements.Electro;
+import com.elementworld.elements.Element;
+import com.elementworld.elements.Frozen;
+import com.elementworld.elements.Geo;
+import com.elementworld.elements.Hydro;
+import com.elementworld.elements.Pyro;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
 import io.netty.buffer.Unpooled;
@@ -21,43 +31,27 @@ import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.UUID;
 
 public class ElementContainer {
-
-
-    /*
-    //创建一个类的实例方便调用
-    public static final Anemo ANEMO = (Anemo) Element.create(Element.ElementType.ANEMO,0);
-    public static final Cryo CRYO = (Cryo) Element.create(Element.ElementType.CRYO,0);
-    public static final Dendro DENDRO = (Dendro) Element.create(Element.ElementType.DENDRO,0);
-    public static final Electro ELECTRO = (Electro) Element.create(Element.ElementType.ELECTRO,0);
-    public static final Frozen FROZEN = (Frozen) Element.create(Element.ElementType.FROZEN,0);
-    public static final Geo GEO = (Geo) Element.create(Element.ElementType.GEO,0);
-    public static final Hydro HYDRO = (Hydro) Element.create(Element.ElementType.HYDRO,0);
-    public static final Pyro PYRO = (Pyro) Element.create(Element.ElementType.PYRO,0);
-    public static final Catalyze QUICKEN = (Catalyze) Element.create(Element.ElementType.Catalyze,0);
-
-     */
-
-    //一些成员
+//一些成员
     private final ArrayList<Element> elements = new ArrayList<>();//该映射用于存储该容器所拥有的元素实例
     private final LivingEntity owner;//此为该容器拥有者
     private LivingEntity latestAttacker;//最后施加元素的生物
     private HashSet<Modifiers> modifiersSet;//修改器集
     private HashMap<Class<?extends Reaction>,Reaction> reactions;
-
-    //!Debug!
-    @SuppressWarnings("FieldCanBeLocal")
-    private final boolean debugMode = true;//此处打开debug模式，等到正式发布时删除（将此处变量设为false）这部分代码
     private int displayRateCD = 0;
 
     //正常生存可以调整的模式
-    public boolean displayElement = true;//是否显示元素（这里应该是是否显示图标，与上方debug模式作区分）
+    private boolean displayElement = true;
 
     //owner的各类属性
     private double mastery;//元素精通
@@ -75,7 +69,7 @@ public class ElementContainer {
 
     //辅助数据结构
     private HashMap<Class<? extends Element>,Boolean> hasElement;//此集合用于表示是否有某种元素
-    private final Vector<Element> deadElements = new Vector<>();//这是元素量小于0的元素的集合
+    private final ArrayList<Element> deadElements = new ArrayList<>();//这是元素量小于0的元素的集合
 
 
 
@@ -120,8 +114,8 @@ public class ElementContainer {
         deadElements.clear();//清空这个tick需要清除的元素
 
 
-        //Debug模式：显示玩家目前所拥有的元素
-        if(owner instanceof PlayerEntity player && debugMode){
+        // Show attached elements while debug mode is enabled.
+        if (ElementWorld.DEBUG && owner instanceof PlayerEntity player){
             boolean flag = true;
             StringBuilder stringBuilder = new StringBuilder();
             for(Element element : elements){
@@ -165,10 +159,10 @@ public class ElementContainer {
             if(reactions == null){
                 reactions = new HashMap<>();
             }
-            Electro_Charged electroCharged =(Electro_Charged) reactions.get(Electro_Charged.class);
+            ElectroCharged electroCharged =(ElectroCharged) reactions.get(ElectroCharged.class);
             if(electroCharged != null){
                 if(electroCharged.die){
-                    reactions.remove(Electro_Charged.class);
+                    reactions.remove(ElectroCharged.class);
                     isElectroCharged=false;
                 }else {
                     electroCharged.tick();//运行tick方法
@@ -200,7 +194,7 @@ public class ElementContainer {
                 buf.writeString(element.toString());
             }
 
-            ServerPlayNetworking.send(player,new Identifier(ElementWorld.MOD_ID,"element_types"),buf);
+            ServerPlayNetworking.send(player, ElementWorld.ELEMENT_TYPES_PACKET_ID, buf);
         }
     }
 
@@ -270,11 +264,10 @@ public class ElementContainer {
                         if(reactions == null){
                             reactions = new HashMap<>();
                         }
-                        if(reactions.get(Electro_Charged.class) == null){
+                        if(reactions.get(ElectroCharged.class) == null){
                             Reaction reaction = Reaction.create(Reaction.ReactionType.ELECTRO_CHARGED,owner,damageSource,bRElement,element);
-                            reactions.put(Electro_Charged.class,reaction);
+                            reactions.put(ElectroCharged.class,reaction);
                             isElectroCharged = true;
-                            addElement(element);
                             //返回感电反应
                             return reaction;
                         }
@@ -288,7 +281,7 @@ public class ElementContainer {
                     return Reaction.create(Reaction.ReactionType.BLOOM,owner,damageSource,bRElement,element);
                 }
                 else {
-                    System.out.println("[Warning] ElementApplied Error!");
+                    ElementWorld.LOGGER.warn("ElementApplied Error: Hydro applied to unexpected element {}", bRElement.getClass().getSimpleName());
                 }
             }
 
@@ -323,7 +316,7 @@ public class ElementContainer {
                     }
                 }
                 else{
-                    System.out.println("[Warning] ElementApplied Error!");
+                    ElementWorld.LOGGER.warn("ElementApplied Error: Pyro applied to unexpected element {}", bRElement.getClass().getSimpleName());
                 }
             }
             //如果添加的元素为雷
@@ -340,7 +333,7 @@ public class ElementContainer {
                         if(reactions == null){
                             reactions = new HashMap<>();
                         }
-                        reactions.put(Electro_Charged.class,reaction);
+                        reactions.put(ElectroCharged.class,reaction);
                         return reaction;
                     }
                 }
@@ -364,7 +357,7 @@ public class ElementContainer {
                     return Reaction.create(Reaction.ReactionType.CATALYZE,owner,damageSource,bRElement,element);
                 }
                 else{
-                    System.out.println("[Warning] ElementApplied Error!");
+                    ElementWorld.LOGGER.warn("ElementApplied Error: Electro applied to unexpected element {}", bRElement.getClass().getSimpleName());
                 }
             }
             else if(element instanceof Cryo){//后手元素为冰
@@ -425,7 +418,7 @@ public class ElementContainer {
                 return Reaction.create(Reaction.ReactionType.CRYSTALLIZE,owner,damageSource,bRElement,element);
             }
             else{
-                System.out.println("Container has a wrong element");
+                ElementWorld.LOGGER.warn("Container has a wrong element type: {}", element.getClass().getSimpleName());
             }
         }
         return null;
@@ -488,7 +481,7 @@ public class ElementContainer {
 
 
     //下面这个方法用于get修改器列表
-    public Modifiers getModifiers(Modifiers.modifierType modifierType){
+    public Modifiers getModifiers(Modifiers.ModifierType modifierType){
         if(modifiersSet == null){
             modifiersSet = new HashSet<>();
         }
@@ -498,8 +491,9 @@ public class ElementContainer {
                 return modifiers;
             }
         }
-        modifiersSet.add(new Modifiers(modifierType));
-        return null;
+        Modifiers newModifiers = new Modifiers(modifierType);
+        modifiersSet.add(newModifiers);
+        return newModifiers;
     }
 
     /*
@@ -539,7 +533,7 @@ public class ElementContainer {
     }
 
     public double getMastery(){
-        return getModifiers(Modifiers.modifierType.MASTERY).applyModifiers((float) getBaseMastery());
+        return getModifiers(Modifiers.ModifierType.MASTERY).applyModifiers((float) getBaseMastery());
     }
 
     public double getMasteryBonus(){
@@ -584,14 +578,14 @@ public class ElementContainer {
 
     //------------------------下面实现护盾运算----------------------------------
     protected LinkedHashMap<UUID, Shield> shields;
-    private double shiedStrength = 1;
+    private double shieldStrength = 1;
 
-    public double getShiedStrength(){
-        return shiedStrength;
+    public double getShieldStrength(){
+        return shieldStrength;
     }
 
-    public void setShiedStrength(double shiedStrength){
-        this.shiedStrength = shiedStrength;
+    public void setShieldStrength(double shieldStrength){
+        this.shieldStrength = shieldStrength;
     }
 
     public void addShield(@NotNull Shield shield){
@@ -610,20 +604,20 @@ public class ElementContainer {
 
     /*
     该方法用于计算护盾对伤害的抵消
+    返回值：经过护盾抵消后剩余的伤害（没有护盾或护盾未满格时原样/部分返回）
      */
     public float applyShield(@Nullable Class<? extends Element> element,float damage){
-        if(shields == null){
-            return 0;
+        if(shields == null || shields.isEmpty()){
+            return damage;
         }
+        //清理已失效的护盾
+        shields.values().removeIf(Shield::isDie);
         for(Shield shield : shields.values()){
             if(damage <= 0){
-                return 0;
+                break;
             }
-            damage =(float) (shield.apply(damage,element));
-            if(damage <= 0){
-                return 0;
-            }
+            damage = (float) shield.apply(damage, element);
         }
-        return damage;
+        return Math.max(damage, 0);
     }
 }

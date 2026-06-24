@@ -1,3 +1,9 @@
 {
-
+  "commands.elementworld.add.success": "\u5df2\u6dfb\u52a0 %s \u5143\u7d20\u3002",
+  "commands.elementworld.container.empty": "\u76ee\u6807\u6ca1\u6709\u9644\u7740\u5143\u7d20\u3002",
+  "commands.elementworld.mixin.missing": "\u76ee\u6807\u4e0a\u6ca1\u6709 ElementWorld \u6570\u636e\u3002",
+  "commands.elementworld.target.invalid": "\u76ee\u6807\u5fc5\u987b\u662f\u751f\u7269\u5b9e\u4f53\u3002",
+  "death.attack.element_damage": "%1$s \u53d7\u5230\u4e86\u5143\u7d20\u80fd\u91cf\u7684\u4f24\u5bb3",
+  "death.attack.element_damage.player": "%1$s \u53d7\u5230\u4e86 %2$s \u7684\u5143\u7d20\u80fd\u91cf\u4f24\u5bb3",
+  "item.elementworld.gui_stick.used": "GUI \u6728\u68cd\u5df2\u4f7f\u7528"
 }

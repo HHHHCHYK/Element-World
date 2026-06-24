@@ -92,3 +92,51 @@ publishing {
 		// retrieving dependencies.
 	}
 }
+
+tasks.register('codeStyleCheck') {
+	group = 'verification'
+	description = 'Checks project-specific style rules that do not need external tools.'
+
+	doLast {
+		def violations = []
+		def bannedSnippets = [
+			'System.out',
+			'printStackTrace(',
+			'Hello Fabric world',
+			'This is an example description',
+			'fabric-example-mod',
+			'another-mod'
+		]
+
+		fileTree('src') {
+			include '**/*.java', '**/*.json'
+		}.each { file ->
+			file.eachLine { line, number ->
+				bannedSnippets.each { snippet ->
+					if (line.contains(snippet)) {
+						violations << "${file}:${number}: banned snippet '${snippet}'"
+					}
+				}
+				if (file.name.endsWith('.java') && line ==~ /\s*import\s+.+\.\*;\s*/) {
+					violations << "${file}:${number}: wildcard imports are not allowed"
+				}
+			}
+		}
+
+		fileTree('src') {
+			include '**/*.java'
+		}.each { file ->
+			if (file.name.contains('_')) {
+				violations << "${file}: Java source file names must not contain underscores"
+			}
+		}
+
+		if (!violations.isEmpty()) {
+			throw new GradleException("Code style check failed:\n" + violations.join('\n'))
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('codeStyleCheck')
+}

@@ -9,80 +9,69 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class EWDamageSource {
-    public @Nullable DamageSourceHolder getDamageSourceHolder() {
-        return damageSourceHolder;
-    }
-
-    public enum DAMAGE_TYPE{
-        AmpReaction,TraReaction,Dot,Physics
+    public enum DamageKind {
+        AMPLIFYING_REACTION,
+        TRANSFORMATIVE_REACTION,
+        DOT,
+        PHYSICAL
     }
 
     @NotNull
     private final DamageSource originDamageSource;
 
     @Nullable
-    private DamageSourceHolder damageSourceHolder;
+    private final DamageSourceHolder damageSourceHolder;
 
+    @Nullable
     private Element damageElement;
-    private DAMAGE_TYPE damageType = DAMAGE_TYPE.AmpReaction;
+    private DamageKind damageKind = DamageKind.AMPLIFYING_REACTION;
     private boolean cannotApply = false;
 
-    public EWDamageSource(@NotNull DamageSource damageSource){
+    public EWDamageSource(@NotNull DamageSource damageSource) {
         originDamageSource = damageSource;
-        if(damageSource instanceof DamageSourceHolder holder){
-            damageSourceHolder = holder;
-        }
-    }
-
-    public boolean setElement(Element element){
-        try {
-            if(element == null){
-                damageElement = null;
-                return true;
-            }else {
-                damageElement = element;
-                return true;
-            }
-        } catch (Exception e) {
-            return false;
-        }
+        damageSourceHolder = damageSource instanceof DamageSourceHolder holder ? holder : null;
     }
 
     @Nullable
-    public Element getDamageElement(){
+    public DamageSourceHolder getDamageSourceHolder() {
+        return damageSourceHolder;
+    }
+
+    public void setElement(@Nullable Element element) {
+        damageElement = element;
+    }
+
+    @Nullable
+    public Element getDamageElement() {
         return damageElement;
     }
 
     @NotNull
-    public DamageSource getDamageSource(){
+    public DamageSource getDamageSource() {
         return originDamageSource;
     }
 
-    public DAMAGE_TYPE getDamageType(){
-        return damageType;
+    public DamageKind getDamageKind() {
+        return damageKind;
     }
 
-    public void setDamageType(DAMAGE_TYPE damageType){
-        this.damageType = damageType;
+    public void setDamageKind(DamageKind damageKind) {
+        this.damageKind = damageKind;
     }
 
-    public Class<?extends EP> getEP(){
-        if (damageElement == null) {
-            return Physics.class;
-        }else{
-            return damageElement.getClass();
-        }
+    public Class<? extends EP> getEP() {
+        return damageElement == null ? Physics.class : damageElement.getClass();
     }
 
-    public boolean isCannotApply(){
+    public boolean isCannotApply() {
         return cannotApply;
     }
 
-    public void setCannotApply(){
-        cannotApply = false;
+    public void setCannotApply() {
+        cannotApply = true;
     }
 
-    public void resetCannotApply(){
-        cannotApply = true;
+    public void resetCannotApply() {
+        cannotApply = false;
     }
 }

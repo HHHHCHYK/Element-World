@@ -1,139 +1,84 @@
 package com.elementworld.elementComponents;
 
-import com.elementworld.elements.*;
+import com.elementworld.ElementWorld;
+import com.elementworld.elements.Anemo;
+import com.elementworld.elements.Cryo;
+import com.elementworld.elements.Dendro;
+import com.elementworld.elements.EP;
+import com.elementworld.elements.Electro;
+import com.elementworld.elements.Geo;
+import com.elementworld.elements.Hydro;
+import com.elementworld.elements.Physics;
+import com.elementworld.elements.Pyro;
 import net.minecraft.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class ResistancesContainer {
-    /*
-        抗性实例
-        成员：
-            抗性元素类别
-            抗性数值
-            实例名称
-        作用：
-            用于记录实体抗性的实例
-         */
-        public record ResistanceInstance(Class<? extends EP> elementType, double resistanceValue, String name) {
-            public ResistanceInstance(@Nullable Class<? extends EP> elementType, double resistanceValue, String name) {
-                this.elementType = elementType;
-                this.resistanceValue = resistanceValue;
-                this.name = name;
-            }
-        }
+    public record ResistanceInstance(@Nullable Class<? extends EP> elementType, double resistanceValue, String name) {
+    }
 
-    /*
-    不同元素的抗性实例集
-     */
     private static class ResistanceSet {
-        public HashMap<String, ResistanceInstance> resistanceInstances = new HashMap<>();
-        public final Class<? extends EP> elementType;
+        private final Map<String, ResistanceInstance> resistanceInstances = new HashMap<>();
+        private final Class<? extends EP> elementType;
 
-        public ResistanceSet(Class<? extends EP> elementType) {
+        private ResistanceSet(Class<? extends EP> elementType) {
             this.elementType = elementType;
         }
 
-        public void addResistance(double value, String name) {
+        private void addResistance(double value, String name) {
             if (resistanceInstances.containsKey(name)) {
-                System.out.println("抗性实例 " + name + " 已存在");
+                ElementWorld.LOGGER.warn("Resistance instance already exists: {}", name);
                 return;
             }
             resistanceInstances.put(name, new ResistanceInstance(elementType, value, name));
         }
 
-        public boolean removeResistance(String name) {
-            if (resistanceInstances.containsKey(name)) {
-                resistanceInstances.remove(name);
-                return true;
-            }
-            return false;
+        private boolean removeResistance(String name) {
+            return resistanceInstances.remove(name) != null;
         }
 
-        public double apply() {
-            double totalResistance = 0.0;
-            for (ResistanceInstance instance : resistanceInstances.values()) {
-                totalResistance += instance.resistanceValue();
-            }
-            return totalResistance;
+        private double apply() {
+            return resistanceInstances.values().stream().mapToDouble(ResistanceInstance::resistanceValue).sum();
         }
     }
 
-    /*
-    不同元素的抗性集合
-     */
-    private final ResistanceSet hydroResistSet;
-    private final ResistanceSet pyroResistSet;
-    private final ResistanceSet anemoResistSet;
-    private final ResistanceSet cryoResistSet;
-    private final ResistanceSet dendroResistSet;
-    private final ResistanceSet electroResistSet;
-    private final ResistanceSet geoResistSet;
-    private final ResistanceSet physicsResistSet;
-
-    /*
-    容器属性
-     */
     private final LivingEntity owner;
+    private final Map<Class<? extends EP>, ResistanceSet> resistanceSets = new HashMap<>();
 
     public ResistancesContainer(LivingEntity owner) {
         this.owner = owner;
-        // 初始化所有抗性集合
-        hydroResistSet = new ResistanceSet(Hydro.class);
-        pyroResistSet = new ResistanceSet(Pyro.class);
-        anemoResistSet = new ResistanceSet(Anemo.class);
-        cryoResistSet = new ResistanceSet(Cryo.class);
-        dendroResistSet = new ResistanceSet(Dendro.class);
-        electroResistSet = new ResistanceSet(Electro.class);
-        geoResistSet = new ResistanceSet(Geo.class);
-        physicsResistSet = new ResistanceSet(null); // 物理抗性
     }
 
-    // 添加抗性
-    public void addResistance(Class<? extends EP> elementType, double value, String name) {
-        ResistanceSet set = getResistanceSet(elementType);
-        if (set != null) {
-            set.addResistance(value, name);
-        }
+    public void addResistance(@Nullable Class<? extends EP> elementType, double value, String name) {
+        getResistanceSet(elementType).addResistance(value, name);
     }
 
-    // 移除抗性
-    public boolean removeResistance(Class<? extends EP> elementType, String name) {
-        ResistanceSet set = getResistanceSet(elementType);
-        return set != null && set.removeResistance(name);
+    public boolean removeResistance(@Nullable Class<? extends EP> elementType, String name) {
+        return getResistanceSet(elementType).removeResistance(name);
     }
 
-    // 获取总抗性值
     public double getResistanceValue(@Nullable Class<? extends EP> elementType) {
-        ResistanceSet set = getResistanceSet(elementType);
-        return set != null ? set.apply() : 0.0;
+        return getResistanceSet(elementType).apply();
     }
 
-    // 根据元素类型获取对应的抗性集合
-    private ResistanceSet getResistanceSet(Class<? extends EP> elementType) {
-        if (elementType == Hydro.class) {
-            return hydroResistSet;
-        } else if (elementType == Pyro.class) {
-            return pyroResistSet;
-        } else if (elementType == Anemo.class) {
-            return anemoResistSet;
-        } else if (elementType == Cryo.class) {
-            return cryoResistSet;
-        } else if (elementType == Dendro.class) {
-            return dendroResistSet;
-        } else if (elementType == Electro.class) {
-            return electroResistSet;
-        } else if (elementType == Geo.class) {
-            return geoResistSet;
-        } else if (elementType == Physics.class) {
-            return physicsResistSet;
-        } else {
-            return null; // 默认处理物理抗性
-        }
-    }
-
-    public LivingEntity getOwner(){
+    public LivingEntity getOwner() {
         return owner;
+    }
+
+    private ResistanceSet getResistanceSet(@Nullable Class<? extends EP> elementType) {
+        Class<? extends EP> normalizedElementType = normalize(elementType);
+        return resistanceSets.computeIfAbsent(normalizedElementType, ResistanceSet::new);
+    }
+
+    private static Class<? extends EP> normalize(@Nullable Class<? extends EP> elementType) {
+        if (elementType == Hydro.class || elementType == Pyro.class || elementType == Anemo.class
+                || elementType == Cryo.class || elementType == Dendro.class || elementType == Electro.class
+                || elementType == Geo.class) {
+            return elementType;
+        }
+        return Physics.class;
     }
 }

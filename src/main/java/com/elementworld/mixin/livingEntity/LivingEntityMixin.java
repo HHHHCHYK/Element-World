@@ -45,12 +45,12 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
     public abstract boolean removeStatusEffect(StatusEffect type);
 
     @Unique
-    public ElementContainer elementContainer;
+    private ElementContainer elementContainer;
 
 
     @Inject(method = "tick", at = @At("HEAD"))
     public void livingEntityTickMixin(CallbackInfo info) {
-        //懒加载
+        //鎳掑姞杞?
         if (elementContainer == null) {
             elementContainer = new ElementContainer((LivingEntity) (Object) this);
         }
@@ -60,7 +60,7 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
     @Unique
     @Override
     public ElementContainer getElementContainer$EW() {
-        //懒加载
+        //鎳掑姞杞?
         if (elementContainer == null) {
             elementContainer = new ElementContainer((LivingEntity) (Object) this);
         }
@@ -68,7 +68,7 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
     }
 
 
-    //更改伤害判定
+    //鏇存敼浼ゅ鍒ゅ畾
     @ModifyArgs(
             method = "damage",
             at = @At(
@@ -79,67 +79,57 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
     public void applyDamageModifyArgs(Args args) {
         DamageSource source = args.get(0);
         float amount = args.get(1);
-        //((LivingEntity) (Object) this).sendMessage(Text.literal("1"));//Debug
-        LivingEntity thisLivingEntity = (LivingEntity) (Object) this;//获取当前生物的实例
+        LivingEntity thisLivingEntity = (LivingEntity) (Object) this;//鑾峰彇褰撳墠鐢熺墿鐨勫疄渚?
 
 
         if (amount <= 0) {
             return;
         }
 
-        //thisLivingEntity.sendMessage(Text.literal("2"));//Debug
         if (source != null) {
             /*
-             * 1.获取攻击者的元素容器
+             * 1.鑾峰彇鏀诲嚮鑰呯殑鍏冪礌瀹瑰櫒
              */
-            //(thisLivingEntity).sendMessage(Text.literal("3"));
 
-            if (thisLivingEntity == null) {//空值检查
-                //((LivingEntity) (Object) this).sendMessage(Text.literal("This is null"));
+            if (thisLivingEntity == null) {//绌哄€兼鏌?
                 return;
             }
-            ElementContainer ownContainer = ((LivingEntityHolder) this).getElementContainer$EW();//获取自身元素容器
+            ElementContainer ownContainer = ((LivingEntityHolder) this).getElementContainer$EW();//鑾峰彇鑷韩鍏冪礌瀹瑰櫒
 
-            if (!thisLivingEntity.isInvulnerableTo(source)) {//判断生物是否对于来源无敌
-                //(thisLivingEntity).sendMessage(Text.literal("Not Invulnerable"));//Debug
+            if (!thisLivingEntity.isInvulnerableTo(source)) {//鍒ゆ柇鐢熺墿鏄惁瀵逛簬鏉ユ簮鏃犳晫
                 if (source instanceof DamageSourceHolder damageHolder) {
-                    if (damageHolder.getEWDamageSource$EW() == null) {//空值检查
+                    if (damageHolder.getEWDamageSource$EW() == null) {//绌哄€兼鏌?
                         return;
                     }
-                    if (!ownContainer.isImmune(damageHolder.getEWDamageSource$EW().getEP())) {//判断生物是否有对某个元素的免疫
-                        //(thisLivingEntity).sendMessage(Text.literal("Not Immune"));//Debug
+                    if (!ownContainer.isImmune(damageHolder.getEWDamageSource$EW().getEP())) {//鍒ゆ柇鐢熺墿鏄惁鏈夊鏌愪釜鍏冪礌鐨勫厤鐤?
                         Element element = damageHolder.getElement$EW();
-                        if (element != null) {//如果这次攻击带有元素附着
-                            //(thisLivingEntity).sendMessage(Text.literal("Has Element"));//Debug
+                        if (element != null) {//濡傛灉杩欐鏀诲嚮甯︽湁鍏冪礌闄勭潃
 
                             Reaction reaction;
-                            if (!damageHolder.getEWDamageSource$EW().isCannotApply()) {//判断这次反应是否造成元素附着
-                                //(thisLivingEntity).sendMessage(Text.literal("can Apply"));//Debug
+                            if (!damageHolder.getEWDamageSource$EW().isCannotApply()) {//鍒ゆ柇杩欐鍙嶅簲鏄惁閫犳垚鍏冪礌闄勭潃
                                 /*
-                                这一步为元素反应容器添加附着
+                                杩欎竴姝ヤ负鍏冪礌鍙嶅簲瀹瑰櫒娣诲姞闄勭潃
                                  */
-                                reaction = ownContainer.applyElement(element, source);//添加元素，获得反应实例
-                                //(thisLivingEntity).sendMessage(Text.literal("Has Reaction"));//Debug
+                                reaction = ownContainer.applyElement(element, source);//娣诲姞鍏冪礌锛岃幏寰楀弽搴斿疄渚?
 
 
-                                if (source.getAttacker() != null) {//存在攻击者
+                                if (source.getAttacker() != null) {//瀛樺湪鏀诲嚮鑰?
                                     ElementContainer attackerContainer = ((LivingEntityHolder) source.getAttacker()).getElementContainer$EW();
                                     if (attackerContainer != null) {
-                                        if (reaction != null) {//如果产生了元素反应
+                                        if (reaction != null) {//濡傛灉浜х敓浜嗗厓绱犲弽搴?
 
 
-                                            if (reaction instanceof AmpReaction ampReaction) {//如果反应类型为增幅反应
+                                            if (reaction instanceof AmpReaction ampReaction) {//濡傛灉鍙嶅簲绫诲瀷涓哄骞呭弽搴?
                                                 amount = (float) (amount
-                                                        * (1 + (ampReaction.getReactionBaseMul()))//元素反应增伤
-                                                        * AmpReaction.getMasteryAmp(attackerContainer.getMastery())//精通增伤
-                                                        * (1 + attackerContainer.getBonusValue(Element.ToEP(element.getClass())))//增伤乘区
-                                                        * (1 - ownContainer.getResistanceValue(Element.ToEP(element.getClass())))//减抗乘区
+                                                        * (1 + (ampReaction.getReactionBaseMul()))//鍏冪礌鍙嶅簲澧炰激
+                                                        * AmpReaction.getMasteryAmp(attackerContainer.getMastery())//绮鹃€氬浼?
+                                                        * (1 + attackerContainer.getBonusValue(Element.toEpClass(element.getClass())))//澧炰激涔樺尯
+                                                        * (1 - ownContainer.getResistanceValue(Element.toEpClass(element.getClass())))//鍑忔姉涔樺尯
                                                 );
                                             } else {
-                                                reaction.apply();//运行一次元素反应内容
+                                                reaction.apply();//杩愯涓€娆″厓绱犲弽搴斿唴瀹?
                                             }
-                                        } else {//如果没有产生元素反应
-                                            //thisLivingEntity.sendMessage(Text.literal("No Reaction"));
+                                        } else {//濡傛灉娌℃湁浜х敓鍏冪礌鍙嶅簲
                                             Class<? extends EP> elementType = element.getClass();
                                             amount = (float) (amount
                                                     * (1 + attackerContainer.getBonusValue(elementType))
@@ -147,56 +137,52 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                                             );
                                         }
                                     }
-                                } else {//如果攻击者为空
-                                    //thisLivingEntity.sendMessage(Text.literal("Attacker is null"));
-                                    if (reaction != null) {//如果产生了元素反应
+                                } else {//濡傛灉鏀诲嚮鑰呬负绌?
+                                    if (reaction != null) {//濡傛灉浜х敓浜嗗厓绱犲弽搴?
 
 
-                                        if (reaction instanceof AmpReaction ampReaction) {//如果反应类型为增幅反应
+                                        if (reaction instanceof AmpReaction ampReaction) {//濡傛灉鍙嶅簲绫诲瀷涓哄骞呭弽搴?
                                             amount = (float) (amount
-                                                    * (1 + (ampReaction.getReactionBaseMul()))//元素反应增伤
-                                                    * (1 - ownContainer.getResistanceValue(Element.ToEP(element.getClass())))//减抗乘区
+                                                    * (1 + (ampReaction.getReactionBaseMul()))//鍏冪礌鍙嶅簲澧炰激
+                                                    * (1 - ownContainer.getResistanceValue(Element.toEpClass(element.getClass())))//鍑忔姉涔樺尯
                                             );
                                         } else {
-                                            reaction.apply();//运行一次元素反应内容
+                                            reaction.apply();//杩愯涓€娆″厓绱犲弽搴斿唴瀹?
                                         }
-                                    } else {//如果没有产生元素反应
-                                        //thisLivingEntity.sendMessage(Text.literal("No Reaction"));
+                                    } else {//濡傛灉娌℃湁浜х敓鍏冪礌鍙嶅簲
                                         Class<? extends EP> elementType = element.getClass();
                                         amount = (float) (amount
                                                 * (1 - ownContainer.getResistanceValue(elementType))
                                         );
                                     }
                                 }
-                            } else {//如果不造成元素附着
+                            } else {//濡傛灉涓嶉€犳垚鍏冪礌闄勭潃
                                 amount = (float) (amount
-                                        * (1 - ownContainer.getResistanceValue(Element.ToEP(element.getClass())))
+                                        * (1 - ownContainer.getResistanceValue(Element.toEpClass(element.getClass())))
                                 );
                                 /*
-                                如果存在攻击者，则计算增伤乘区
+                                濡傛灉瀛樺湪鏀诲嚮鑰咃紝鍒欒绠楀浼や箻鍖?
                                  */
-                                if (source.getAttacker() != null) {//如果存在攻击者
+                                if (source.getAttacker() != null) {//濡傛灉瀛樺湪鏀诲嚮鑰?
                                     ElementContainer attackerContainer = ((LivingEntityHolder) source.getAttacker()).getElementContainer$EW();
                                     if (attackerContainer != null) {
                                         amount = (float) (amount
-                                                * (1 + attackerContainer.getBonusValue(Element.ToEP(element.getClass())))
+                                                * (1 + attackerContainer.getBonusValue(Element.toEpClass(element.getClass())))
                                         );
                                     }
                                 }
                             }
 
-                        } else {//这次攻击不附带元素附着
-                            //thisLivingEntity.sendMessage(Text.literal("No Element"));
-                            if (source.getAttacker() != null) {//存在攻击者
+                        } else {//杩欐鏀诲嚮涓嶉檮甯﹀厓绱犻檮鐫€
+                            if (source.getAttacker() != null) {//瀛樺湪鏀诲嚮鑰?
 
                                 ElementContainer attackerContainer = ((LivingEntityHolder) source.getAttacker()).getElementContainer$EW();
-                                if (attackerContainer != null) {//空值检查
+                                if (attackerContainer != null) {//绌哄€兼鏌?
                                     amount = (float) (amount
                                             * (1 + attackerContainer.getBonusValue(Physics.class))
                                             * (1 - ownContainer.getResistanceValue(Physics.class))
                                     );
-                                } else {//不存在攻击者
-                                    //thisLivingEntity.sendMessage(Text.literal("Attacker is null"));
+                                } else {//涓嶅瓨鍦ㄦ敾鍑昏€?
                                     amount = (float) (amount
                                             * (1 - ownContainer.getResistanceValue(Physics.class))
                                     );
@@ -207,12 +193,11 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                     }
 
                     /*
-                    下面处理护盾对于伤害的影响
-                        对于damageHolder的非空检查：source ！= null
+                    涓嬮潰澶勭悊鎶ょ浘瀵逛簬浼ゅ鐨勫奖鍝?
+                        瀵逛簬damageHolder鐨勯潪绌烘鏌ワ細source 锛? null
                      */
-                    //((LivingEntity) (Object) this).sendMessage(Text.literal("11111"));//Debug
                     Element element = damageHolder.getElement$EW();
-                    //下面对于element进行非空检查，如若空则直接返回null，非空则返回其类
+                    //涓嬮潰瀵逛簬element杩涜闈炵┖妫€鏌ワ紝濡傝嫢绌哄垯鐩存帴杩斿洖null锛岄潪绌哄垯杩斿洖鍏剁被
                     if (element == null) {
                         amount = ownContainer.applyShield(null, amount);
                     } else {
@@ -221,7 +206,7 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                 }
             }
         }
-        //((LivingEntity) (Object) this).sendMessage(Text.literal("Finish Modify"));
+        args.set(1, amount);
     }
 }
 

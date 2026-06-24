@@ -1,9 +1,8 @@
 package com.elementworld;
 
 import com.elementworld.command.Commands;
-import com.elementworld.command.Hello;
-import com.elementworld.registers.ArgumentType;
 import com.elementworld.registers.ItemRegistry;
+import com.elementworld.registers.ModArgumentTypes;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.entity.damage.DamageType;
@@ -14,42 +13,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ElementWorld implements ModInitializer {
-	public static final String MOD_ID = "elementworld";
+    public static final String MOD_ID = "elementworld";
+    public static final Identifier ELEMENT_DAMAGE_ID = new Identifier(MOD_ID, "element_damage");
+    public static final Identifier ELEMENT_TYPES_PACKET_ID = new Identifier(MOD_ID, "element_types");
+    public static final RegistryKey<DamageType> ELEMENT_DAMAGE = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, ELEMENT_DAMAGE_ID);
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	//注册伤害类型
-	public static final RegistryKey<DamageType> ELEMENT_DAMAGE
-			= RegistryKey.of(RegistryKeys.DAMAGE_TYPE,new Identifier(ElementWorld.MOD_ID,"element_damage"));
+    public static boolean DEBUG = false;
 
-
-
-	// This logger is used to write text to the console and the log file.
-	// It is considered best practice to use your mod id as the logger's name.
-	// That way, it's clear which mod wrote info, warnings, and errors.
-	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-
-	@Override
-	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
-
-		LOGGER.info("Hello Fabric world!");
-
-		//注册物品
-		ItemRegistry.registerItems();
-
-
-		ArgumentType.register();//注册自定义参数类型
-
-		/*
-		下面是进行将命令注册到命令分发器的操作，与注册命令的操作区分（消歧义）
-		 */
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-			/*
-			   将命令注册到命令分发器
-			 */
-			Hello.register(dispatcher);
-			Commands.register(dispatcher);
-		});
-	}
+    @Override
+    public void onInitialize() {
+        LOGGER.info("Initializing ElementWorld");
+        ItemRegistry.registerItems();
+        ModArgumentTypes.register();
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> Commands.register(dispatcher));
+    }
 }

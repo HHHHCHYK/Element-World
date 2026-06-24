@@ -1,6 +1,7 @@
 package com.elementworld.elementComponents.reaction;
 
-import com.elementworld.Calculater;
+import com.elementworld.Calculator;
+import com.elementworld.ElementWorld;
 import com.elementworld.elements.Electro;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Hydro;
@@ -12,7 +13,7 @@ import net.minecraft.util.math.Box;
 
 import java.util.List;
 
-public class Electro_Charged extends Reaction{
+public class ElectroCharged extends Reaction{
 
     private final Hydro hydro;
     private final Electro electro;
@@ -21,22 +22,22 @@ public class Electro_Charged extends Reaction{
 
     public boolean die = false;
 
-    public Electro_Charged(LivingEntity owner,DamageSource damageSource,Element firseElement,Element secondELement){
-        super(owner,damageSource,firseElement,secondELement);
-        if(firseElement instanceof Hydro){
-            hydro = (Hydro) firseElement;
-            electro = (Electro) secondELement;
+    public ElectroCharged(LivingEntity owner,DamageSource damageSource,Element firstElement,Element secondElement){
+        super(owner,damageSource,firstElement,secondElement);
+        if(firstElement instanceof Hydro){
+            hydro = (Hydro) firstElement;
+            electro = (Electro) secondElement;
         }
         else{
-            hydro = (Hydro) secondELement;
-            electro = (Electro) firseElement;
+            hydro = (Hydro) secondElement;
+            electro = (Electro) firstElement;
         }
     }
 
     public void tick(){
         if(hydro.getGauge()<=0 || electro.getGauge() <= 0){
             die = true;
-            System.out.println("die");
+            ElementWorld.LOGGER.debug("ElectroCharged reaction ended (gauge depleted)");
             return;
         }
         if(reactionCD > 0){
@@ -57,7 +58,7 @@ public class Electro_Charged extends Reaction{
                     livingEntity -> livingEntity instanceof LivingEntityHolder
             );
             for(LivingEntity livingEntity : livingEntityList){
-                if(livingEntity instanceof LivingEntityHolder && Calculater.distance(livingEntity.getPos(),owner.getPos()) < 5){
+                if(livingEntity instanceof LivingEntityHolder && Calculator.distance(livingEntity.getPos(),owner.getPos()) < 5){
                     livingEntity.damage(reactionDamage,damageValue);
                 }
             }

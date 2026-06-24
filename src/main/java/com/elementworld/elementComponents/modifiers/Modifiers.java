@@ -2,14 +2,14 @@ package com.elementworld.elementComponents.modifiers;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 public class Modifiers {
-
-    //用于标识这个列表的操作目标
-    public enum modifierType{
+    public enum ModifierType {
         MAX_HEALTH,
         BASE_DAMAGE,
         MASTERY,
@@ -17,75 +17,58 @@ public class Modifiers {
         BONUS
     }
 
+    private final ModifierType type;
+    private final List<Modifier> modifiers = new ArrayList<>();
+    private final HashMap<UUID, Modifier> modifierUUIDHashMap = new HashMap<>();
+    private final List<Modifier> deadModifiers = new ArrayList<>();
 
-    //构造方法
-    public Modifiers(modifierType target){
-        this.type = target;
+    public Modifiers(ModifierType target) {
+        type = target;
     }
 
-    private ArrayList<Modifier> deadModifiers;
-
-    public void tick(){
-        for(Modifier modifier : modifiers){
-            if(modifier.isDie()){
-                if(deadModifiers == null){deadModifiers = new ArrayList<>();}
+    public void tick() {
+        for (Modifier modifier : modifiers) {
+            if (modifier.isDie()) {
                 deadModifiers.add(modifier);
             }
             modifier.tick();
         }
 
-        for(Modifier modifier : deadModifiers){
-            modifiers.remove(modifier);
-        }
+        modifiers.removeAll(deadModifiers);
         deadModifiers.clear();
     }
 
-    private final modifierType type;
+    public void addModifier(String name, double value, int duration, Modifier.ModifierMethod method) {
+        addModifier(new Modifier(name, value, duration, method));
+    }
 
-    ArrayList<Modifier> modifiers;
-    HashMap<UUID,Modifier> modifierUUIDHashMap;//提供通过uuid查找修改器的方法
-
-
-    //增减修改器
-    public void addModifier(String name, double value,int duration, Modifier.modifierMethod method){
-        if(modifiers == null){
-            modifiers = new ArrayList<>();
-        }
-        Modifier modifier = new Modifier(name,value,duration,method);
-        modifierUUIDHashMap.put(UUID.nameUUIDFromBytes(name.getBytes()),modifier);
+    public void addModifier(@NotNull Modifier modifier) {
+        modifierUUIDHashMap.put(modifier.getModifierUUID(), modifier);
         modifiers.add(modifier);
     }
 
-    public void addModifier(@NotNull Modifier modifier){
-        if(modifiers == null){
-            modifiers = new ArrayList<>();
-        }
-        modifierUUIDHashMap.put(UUID.nameUUIDFromBytes(modifier.getName().getBytes()),modifier);
-        modifiers.add(modifier);
+    public void removeModifier(@NotNull Modifier modifier) {
+        modifiers.remove(modifier);
+        modifierUUIDHashMap.remove(modifier.getModifierUUID());
     }
 
-    public  void removeModifier(@NotNull Modifier modifier){
+    public void removeModifier(String name) {
+        Modifier modifier = modifierUUIDHashMap.remove(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)));
         modifiers.remove(modifier);
     }
 
-    public void removeModifier(String name){
-        modifiers.remove(modifierUUIDHashMap.get(UUID.nameUUIDFromBytes(name.getBytes())));
-    }
-
-    //应用修改器
-    public float applyModifiers (float base_amount){
-        for(Modifier modifier : modifiers){
-            base_amount = modifier.apply(base_amount);
+    public float applyModifiers(float baseAmount) {
+        for (Modifier modifier : modifiers) {
+            baseAmount = modifier.apply(baseAmount);
         }
-        return base_amount;
+        return baseAmount;
     }
 
-    //getter & setter
-    public modifierType getType() {
+    public ModifierType getType() {
         return type;
     }
 
-    public ArrayList<Modifier> getModifiers(){
+    public List<Modifier> getModifiers() {
         return modifiers;
     }
 }

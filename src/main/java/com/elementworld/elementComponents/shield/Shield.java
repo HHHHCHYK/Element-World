@@ -43,18 +43,18 @@ public class Shield {
         if(owner instanceof LivingEntityHolder holder){//如果正常加载Mixin
             ElementContainer container = holder.getElementContainer$EW();//获取元素容器
             if(this.element == Geo.class){//岩元素护盾全元素强效150%
-                double min  = Math.min(damage, value*1.5*(container.getShiedStrength()));
-                subValue(min/1.5*(container.getShiedStrength()));
+                double min  = Math.min(damage, value*1.5*(container.getShieldStrength()));
+                subValue(min/1.5*(container.getShieldStrength()));
                 return damage - min;
             }
             else if(this.element == element){//同元素护盾对应元素强效250
-                double min = Math.min(damage, value*2.5*(container.getShiedStrength()));
-                subValue(min/2.5*(container.getShiedStrength()));
+                double min = Math.min(damage, value*2.5*(container.getShieldStrength()));
+                subValue(min/2.5*(container.getShieldStrength()));
                 return damage - min;
             }
             else{//其余强效100%
-                double min = Math.min(damage, value*(container.getShiedStrength()));
-                subValue(min/(container.getShiedStrength()));
+                double min = Math.min(damage, value*(container.getShieldStrength()));
+                subValue(min/(container.getShieldStrength()));
                 return damage - min;
             }
         }

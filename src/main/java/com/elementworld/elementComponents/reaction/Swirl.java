@@ -12,8 +12,8 @@ import net.minecraft.world.World;
 import java.util.List;
 
 public class Swirl extends Reaction{
-    public Swirl(LivingEntity owner, DamageSource damageSource, Element firseElement, Element secondELement) {
-        super(owner, damageSource, firseElement, secondELement);
+    public Swirl(LivingEntity owner, DamageSource damageSource, Element firstElement, Element secondElement) {
+        super(owner, damageSource, firstElement, secondElement);
     }
 
     public void apply(){

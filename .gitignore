@@ -1,40 +1,39 @@
-# gradle
-
+# Gradle
 .gradle/
 build/
 out/
 classes/
+*.jar
 
-# eclipse
-
+# Eclipse / VS Code
 *.launch
-
-# idea
-
-.idea/
-*.iml
-*.ipr
-*.iws
-
-# vscode
-
 .settings/
 .vscode/
 bin/
 .classpath
 .project
 
-# macos
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
 
-*.DS_Store
-
-# fabric
-
+# Fabric Loom（运行时数据）
 run/
 
-# java
-
-hs_err_*.log
-replay_*.log
+# Java（崩溃转储与运行时产物）
+hs_err_pid*.log
+replay_pid*.log
 *.hprof
 *.jfr
+
+# 操作系统杂项
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器/工具临时文件
+*.swp
+*.swo
+*~

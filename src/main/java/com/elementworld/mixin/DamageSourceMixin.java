@@ -1,6 +1,5 @@
 package com.elementworld.mixin;
 
-
 import com.elementworld.elementComponents.EWDamageSource;
 import com.elementworld.elements.Element;
 import com.elementworld.interfaces.DamageSourceHolder;
@@ -11,44 +10,34 @@ import org.spongepowered.asm.mixin.Unique;
 
 @Mixin(DamageSource.class)
 public class DamageSourceMixin implements DamageSourceHolder {
+    @Unique
+    private EWDamageSource ewDamageSource = new EWDamageSource((DamageSource) (Object) this);
 
     @Unique
-    public EWDamageSource ewDamageSource = new EWDamageSource((DamageSource) (Object) this);
-
-    @Unique @Nullable
+    @Override
+    @Nullable
     public Element getElement$EW() {
-        if (ewDamageSource != null) {
-            return ewDamageSource.getDamageElement();
-        }else{
-            return null;
-        }
+        return getEWDamageSource$EW().getDamageElement();
     }
 
     @Unique
-    public void setDamageElement$EW(Element element){
-        if(ewDamageSource != null){
-            if(!ewDamageSource.setElement(element)){
-                System.out.println("Set element failed");
-            }
-        }
-
+    @Override
+    public void setDamageElement$EW(@Nullable Element element) {
+        getEWDamageSource$EW().setElement(element);
     }
 
-    @Unique @Override
-    public void setDamageType$EW(EWDamageSource.DAMAGE_TYPE damageType) {
-        if (ewDamageSource != null) {
-            ewDamageSource.setDamageType(damageType);
-        }
+    @Unique
+    @Override
+    public void setDamageKind$EW(EWDamageSource.DamageKind damageKind) {
+        getEWDamageSource$EW().setDamageKind(damageKind);
     }
 
-
-    @Unique @Override
+    @Unique
+    @Override
     public EWDamageSource getEWDamageSource$EW() {
-        if(ewDamageSource == null){
+        if (ewDamageSource == null) {
             ewDamageSource = new EWDamageSource((DamageSource) (Object) this);
         }
         return ewDamageSource;
     }
-
-
 }

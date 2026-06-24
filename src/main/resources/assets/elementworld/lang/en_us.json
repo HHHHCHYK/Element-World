@@ -1,4 +1,9 @@
 {
-  "death.attack.element_damage": "%1$s <暂未适配死亡提示>",
-  "death.attack.element_damage.player": "%1$s <暂未适配死亡提示> %2$s <暂未适配死亡提示>"
+  "commands.elementworld.add.success": "Added %s element.",
+  "commands.elementworld.container.empty": "The target has no attached elements.",
+  "commands.elementworld.mixin.missing": "ElementWorld data is not available on this target.",
+  "commands.elementworld.target.invalid": "Target must be a living entity.",
+  "death.attack.element_damage": "%1$s was damaged by elemental energy",
+  "death.attack.element_damage.player": "%1$s was damaged by elemental energy from %2$s",
+  "item.elementworld.gui_stick.used": "GUI stick used"
 }
