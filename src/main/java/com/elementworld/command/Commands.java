@@ -1,8 +1,8 @@
 package com.elementworld.command;
 
+import com.elementworld.ElementApplicationService;
 import com.elementworld.command.argumenttypes.ElementTypeArgumentType;
 import com.elementworld.elements.Element;
-import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
@@ -11,7 +11,6 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
@@ -77,12 +76,12 @@ public class Commands {
                                             }
 
                                             Element.ElementType elementType = ElementTypeArgumentType.getElement(commandContext, ELEMENT_TYPE_ARGUMENT);
-                                            DamageSource damageSource = DamageSourceHolder.createDamageSource(livingEntity.getWorld(), livingEntity, null);
-                                            ((DamageSourceHolder) damageSource).getEWDamageSource$EW().setElement(Element.create(
+                                            Element trigger = Element.create(
                                                     elementType,
                                                     DoubleArgumentType.getDouble(commandContext, GAUGE_ARGUMENT)
-                                            ));
-                                            livingEntity.damage(damageSource, 0.1f);
+                                            );
+                                            // 走无伤害施加入口，不再用 damage(0.1f) 骗附着
+                                            ElementApplicationService.applyElement(livingEntity, trigger, null);
                                             source.sendMessage(Text.translatable(
                                                     "commands.elementworld.add.success",
                                                     elementType.name().toLowerCase()

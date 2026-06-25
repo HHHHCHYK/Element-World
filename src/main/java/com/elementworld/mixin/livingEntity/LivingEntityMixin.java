@@ -1,8 +1,7 @@
 package com.elementworld.mixin.livingEntity;
 
 import com.elementworld.ElementContainer;
-import com.elementworld.elementComponents.reaction.AmpReaction;
-import com.elementworld.elementComponents.reaction.Reaction;
+import com.elementworld.elementComponents.reaction.ReactionOutcome;
 import com.elementworld.elements.EP;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Physics;
@@ -94,16 +93,11 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
         float amount = args.get(1);
         LivingEntity thisLivingEntity = (LivingEntity) (Object) this; // 获取当前生物的实例
 
-
         if (amount <= 0) {
             return;
         }
 
         if (source != null) {
-            /*
-             * 1.获取攻击者的元素容器
-             */
-
             if (thisLivingEntity == null) { // 空值检查
                 return;
             }
@@ -116,91 +110,55 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                     }
                     if (!ownContainer.isImmune(damageHolder.getEWDamageSource$EW().getEP())) { // 判断生物是否有对某个元素的免疫
                         Element element = damageHolder.getElement$EW();
-                        if (element != null) { // 如果这轮攻击带有元素附着
+                        /*
+                         * 反应已与伤害解耦：容器侧 resolveReaction 完成所有反应副作用并返回 outcome。
+                         * 伤害侧只读取 outcome 决定倍率：
+                         *   - AMPLIFIED：额外乘 reaction 倍率与精通乘数
+                         *   - 其他（NONE / REACTION_OCCURRED，含 cannotApply 二级伤害）：不额外改写
+                         * 任何「有元素」的攻击（无论是否触发反应）都走增伤×减抗乘区，
+                         * 消除旧代码「触发持续反应的攻击漏算乘区」的 BUG。
+                         */
+                        if (element != null) {
+                            Class<? extends EP> elementType = Element.toEpClass(element.getClass());
 
-                            Reaction reaction;
-                            if (!damageHolder.getEWDamageSource$EW().isCannotApply()) { // 判断这轮反应是否造成元素附着
-                                /*
-                                这一步为元素反应容器添加附着
-                                 */
-                                reaction = ownContainer.applyElement(element, source); // 添加元素，获取反应实例
-
-
-                                if (source.getAttacker() != null) { // 存在攻击者
-                                    ElementContainer attackerContainer = ((LivingEntityHolder) source.getAttacker()).getElementContainer$EW();
-                                    if (attackerContainer != null) {
-                                        if (reaction != null) { // 如果产生了元素反应
-
-
-                                            if (reaction instanceof AmpReaction ampReaction) { // 如果反应类型为增幅反应
-                                                amount = (float) (amount
-                                                        * (1 + (ampReaction.getReactionBaseMul())) // 元素反应增伤
-                                                        * AmpReaction.getMasteryAmp(attackerContainer.getMastery()) // 精通增幅
-                                                        * (1 + attackerContainer.getBonusValue(Element.toEpClass(element.getClass()))) // 增伤乘区
-                                                        * (1 - ownContainer.getResistanceValue(Element.toEpClass(element.getClass()))) // 减抗乘区
-                                                );
-                                            } else {
-                                                reaction.apply(); // 运行一次元素反应内容
-                                            }
-                                        } else { // 如果没有产生元素反应
-                                            Class<? extends EP> elementType = element.getClass();
-                                            amount = (float) (amount
-                                                    * (1 + attackerContainer.getBonusValue(elementType))
-                                                    * (1 - ownContainer.getResistanceValue(elementType))
-                                            );
-                                        }
-                                    }
-                                } else { // 如果攻击者为空
-                                    if (reaction != null) { // 如果产生了元素反应
-
-
-                                        if (reaction instanceof AmpReaction ampReaction) { // 如果反应类型为增幅反应
-                                            amount = (float) (amount
-                                                    * (1 + (ampReaction.getReactionBaseMul())) // 元素反应增伤
-                                                    * (1 - ownContainer.getResistanceValue(Element.toEpClass(element.getClass()))) // 减抗乘区
-                                            );
-                                        } else {
-                                            reaction.apply(); // 运行一次元素反应内容
-                                        }
-                                    } else { // 如果没有产生元素反应
-                                        Class<? extends EP> elementType = element.getClass();
-                                        amount = (float) (amount
-                                                * (1 - ownContainer.getResistanceValue(elementType))
-                                        );
-                                    }
-                                }
-                            } else { // 如果不造成元素附着
-                                amount = (float) (amount
-                                        * (1 - ownContainer.getResistanceValue(Element.toEpClass(element.getClass())))
-                                );
-                                /*
-                                如果存在攻击者，则计算增伤乘区
-                                 */
-                                if (source.getAttacker() != null) { // 如果存在攻击者
-                                    ElementContainer attackerContainer = ((LivingEntityHolder) source.getAttacker()).getElementContainer$EW();
-                                    if (attackerContainer != null) {
-                                        amount = (float) (amount
-                                                * (1 + attackerContainer.getBonusValue(Element.toEpClass(element.getClass())))
-                                        );
-                                    }
-                                }
+                            // 解析攻击者及其容器（带 instanceof 检查，避免非生物攻击者抛 CCE）
+                            LivingEntity attacker = source.getAttacker() instanceof LivingEntity livingAttacker ? livingAttacker : null;
+                            ElementContainer attackerContainer = null;
+                            if (attacker instanceof LivingEntityHolder attackerHolder) {
+                                attackerContainer = attackerHolder.getElementContainer$EW();
                             }
 
-                        } else { // 这轮攻击不附带元素附着
-                            if (source.getAttacker() != null) { // 存在攻击者
+                            // 结算反应副作用并获取结果（resolveReaction 内部处理 cannotApply 跳过）
+                            ReactionOutcome outcome = ownContainer.resolveReaction(element, attacker, source);
 
-                                ElementContainer attackerContainer = ((LivingEntityHolder) source.getAttacker()).getElementContainer$EW();
-                                if (attackerContainer != null) { // 空值检查
-                                    amount = (float) (amount
-                                            * (1 + attackerContainer.getBonusValue(Physics.class))
-                                            * (1 - ownContainer.getResistanceValue(Physics.class))
-                                    );
-                                } else { // 不存在攻击者
-                                    amount = (float) (amount
-                                            * (1 - ownContainer.getResistanceValue(Physics.class))
-                                    );
+                            if (outcome instanceof ReactionOutcome.Amplified amp) {
+                                // 增幅反应（蒸发 / 融化）：amount *= 倍率 × 精通 × 增伤 × 减抗
+                                amount = (float) (amount * amp.multiplier());
+                                if (attackerContainer != null) {
+                                    amount = (float) (amount * amp.masteryMultiplier()
+                                            * (1 + attackerContainer.getBonusValue(elementType)));
                                 }
-
+                                amount = (float) (amount * (1 - ownContainer.getResistanceValue(elementType)));
+                            } else {
+                                // NONE / REACTION_OCCURRED：有元素但非增幅（含 cannotApply 二级伤害）
+                                if (attackerContainer != null) {
+                                    amount = (float) (amount * (1 + attackerContainer.getBonusValue(elementType)));
+                                }
+                                amount = (float) (amount * (1 - ownContainer.getResistanceValue(elementType)));
+                            }
+                        } else {
+                            // 这轮攻击不附带元素附着 → 物理增伤 × 物理减抗
+                            LivingEntity attacker = source.getAttacker() instanceof LivingEntity livingAttacker ? livingAttacker : null;
+                            ElementContainer attackerContainer = null;
+                            if (attacker instanceof LivingEntityHolder attackerHolder) {
+                                attackerContainer = attackerHolder.getElementContainer$EW();
+                            }
+                            if (attackerContainer != null) {
+                                amount = (float) (amount
+                                        * (1 + attackerContainer.getBonusValue(Physics.class))
+                                        * (1 - ownContainer.getResistanceValue(Physics.class)));
+                            } else {
+                                amount = (float) (amount * (1 - ownContainer.getResistanceValue(Physics.class)));
                             }
                         }
                     }

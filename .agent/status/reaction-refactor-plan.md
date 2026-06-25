@@ -262,3 +262,97 @@ AMPLIFIED outcome 须同时携带 multiplier 与对应 gauge 扣减，两者来�
 - 共享：ElementApplicationService（非伤害入口）的设计思想
 - 本次不做的发布文档内容：附魔系统、AttackEntityCallback、玩家攻击改走非伤害入口、六元素玩法试玩版
 - 完成 Plan 后，发布文档剩余工作变为"给 ElementApplicationService 接上附魔+AttackEntityCallback 触发源"
+
+---
+
+# 执行时变化（实施记录 — 2026-06-25）
+
+本节记录实施阶段（A→G）相对原 Plan 的偏差与补充决策，供后续追溯。
+所有偏差均经用户确认。最终 `gradlew build` BUILD SUCCESSFUL（含 codeStyleCheck）。
+
+## 偏差 1：阶段F 改为「有元素即走乘区」（关键决策，消解 [BUG]）
+
+**原 Plan（阶段 F / 关键决策）：** NONE / REACTION_OCCURRED → amount 不变；仅 AMPLIFIED 改 amount。
+
+**实际实现：** 任何「有元素」的攻击（无论是否触发反应、触发什么反应）都走增伤×减抗乘区：
+- AMPLIFIED：`amount *= multiplier × masteryMultiplier × (1+增伤) × (1-减抗)`（有attacker）
+  无attacker：`amount *= multiplier × (1-减抗)`
+- NONE / REACTION_OCCURRED（含 cannotApply 二级伤害）：
+  有attacker：`amount *= (1+增伤) × (1-减抗)`；无attacker：`amount *= (1-减抗)`
+- 物理攻击（element==null）：`Physics.class` 增伤×减抗。
+
+**原因：** 原 Plan 的「REACTION_OCCURRED → amount 不变」会让触发感电/燃烧的那次攻击带原始数值直接结算，
+这正是 `todolist-2026-06-25.md` 里的 [BUG]。新逻辑让所有有元素攻击统一走乘区，BUG 被直接消解。
+此决策替代了原 Plan「修复落在 LivingEntityMixin，不在本次重构范围」的范围界定。
+
+## 偏差 2：顺手修复 Combustion.die 永不同步（pre-existing bug）
+
+**原 Plan：** 阶段 B 严格「逐字节一致」，不修 pre-existing bug。
+
+**实际实现：** 在 `Combustion.tick()` 补 `die = fireElement.isDie` 同步。
+- **行为变更：** 燃烧从「一旦触发永不结束」变为「火源（内部 FireElement）熄灭后随之中止」。
+- 根因：旧代码 `combustion.die` 声明但从不赋值，`fireElement.isDie` 永不回传。
+
+## 偏差 3：顺手修 `source.getAttacker()` 强转 CCE 隐患
+
+**原 Plan：** 未提及。
+
+**实际实现：** Mixin 侧把 `((LivingEntityHolder) source.getAttacker())` 改为
+`source.getAttacker() instanceof LivingEntity livingAttacker` 后再取容器，
+攻击者非 LivingEntity 或非 LivingEntityHolder 时不再抛 ClassCastException。
+
+## 结构性差异（非偏差，因发现新事实而对 Plan 描述的修正）
+
+1. **ReactionType / ElementType 都是嵌套枚举，非独立文件。**
+   - `Reaction.ReactionType`（13 常量，无 FREEZE）
+   - `Element.ElementType`（10 常量，激元素 = `QUICKEN`，含 `PHYSICS`）
+   - Plan 正文（A1）提到「冻结 reaction 类型」等措辞需以此为准。
+
+2. **查表 key 处理 PHYSICS→null。** `Element.typeOfElementClass` 对 PHYSICS 返回 null，
+   `ReactionTable.get` 拿到 null trigger/aura 时返回 null handler（落到 warn 分支）。
+
+3. **DamageKind 是死字段。** Plan 风险点1 提到「setCannotApply/DamageKind 让二次调用跳过结算」，
+   实测 `DamageKind` 无任何 setter 调用也无读取，递归防护实际只靠 `cannotApply`。
+   本次未启用 DamageKind，仅依赖 cannotApply。
+
+4. **EC 两路径去重统一为 `containsKey`。** 原 Plan 不对称点1已建议统一，
+   实施时两路径（Hydro×Electro 旧用 `reactions.get==null`、Electro×Hydro 旧用 `!isElectroCharged`）
+   统一为 `ReactionTable.registerElectroCharged` 内 `reactions.containsKey(ElectroCharged.class)`。
+
+5. **ElementContainer 暴露的 handler 辅助方法必须 public。** 因 ReactionTable 在
+   `com.elementworld.elementComponents.reaction` 包、ElementContainer 在顶层包 `com.elementworld`，
+   跨包访问需 public（初版误用 package-private 导致 19 处编译错误，已修）。
+   涉及方法：`addIncomingElement` / `removeAuraElement` / `addFrozenElement` /
+   `addCatalyzeElement` / `ensureReactionsMap` / `markElectroCharged` / `markCombustion`。
+
+6. **resolveReaction 内置 cannotApply 处理（替代 Mixin 分支B）。** 原 Plan 阶段F 步骤2
+   「调容器侧 resolveReaction 拿 outcome」隐含 cannotApply 在容器侧处理。
+   实施时在 resolveReaction 开头检测 source 的 EWDamageSource.isCannotApply()，
+   命中则直接返回 NONE（表示「有元素但非增幅」），让 Mixin 统一走增伤×减抗，
+   消除原 Mixin 的 cannotApply 三分支结构。
+
+7. **持续反应状态标志冗余已缓解。** tick() 读取感电/燃烧时增加「Map 无实例则清布尔标志」的兜底，
+   避免布尔标志与 reactions Map 失同步导致 tick 漏读。布尔标志保留为快速通道。
+
+## 未做项（与原 Plan「本次不做」一致）
+
+- 持续反应持久化（loadPersistentState 末尾仍 clearRuntimeReactionState）
+- 空壳反应补全（Crystallize / Bloom / Catalyze 的 apply 仍空继承）
+- SHATTER / BURGEON / HYPERBLOOM 触发路径与实现
+- 附魔系统 / AttackEntityCallback（发布文档后续阶段）
+- Element.java 枚举 switch 散落重构
+- Reaction 工厂结构改动
+
+## 验证状态
+
+- ✅ `gradlew build` BUILD SUCCESSFUL（含 `codeStyleCheck` / `check`）
+- ✅ `git diff --check` 无空白错误
+- ✅ `test NO-SOURCE`（项目无单测）
+- ⏳ 手动 DEBUG 回归未执行（需进游戏，回归清单见 `todolist-2026-06-25.md` 末尾）
+
+## 产出文件清单
+
+新建：`ReactionOutcome` / `ReactionContext` / `ReactionHandler` / `ReactionTable` /
+`ElementApplicationService`。
+修改：`ElementContainer`（applyElement 瘦身 + resolveReaction + helper）/ `LivingEntityMixin`
+（按 outcome 分发）/ `Combustion`（die 同步）/ `Commands`（删 damage hack）。

@@ -41,6 +41,9 @@ public class Combustion extends Reaction{
             fireElement.tick();
         }
 
+        //将内部燃元素的 die 状态同步到本反应，使 ElementContainer.tick 能据此移除本反应。
+        //修复：旧代码 die 永不为 true，导致燃烧一旦触发永不结束。
+        die = fireElement.isDie;
 
         if(combustionCD>0){//燃烧还在冷却
             combustionCD--;

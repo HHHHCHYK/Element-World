@@ -7,6 +7,10 @@ import com.elementworld.elementComponents.modifiers.Modifiers;
 import com.elementworld.elementComponents.reaction.Combustion;
 import com.elementworld.elementComponents.reaction.ElectroCharged;
 import com.elementworld.elementComponents.reaction.Reaction;
+import com.elementworld.elementComponents.reaction.ReactionContext;
+import com.elementworld.elementComponents.reaction.ReactionHandler;
+import com.elementworld.elementComponents.reaction.ReactionOutcome;
+import com.elementworld.elementComponents.reaction.ReactionTable;
 import com.elementworld.elementComponents.shield.Shield;
 import com.elementworld.elements.Anemo;
 import com.elementworld.elements.Catalyze;
@@ -157,33 +161,35 @@ public class ElementContainer {
 
         /*
         检查感电状态和燃烧状态
+        统一通过 reactions.containsKey 判定，消除布尔标志与 Map 的双重冗余读取。
          */
         if(isElectroCharged){
-            if(reactions == null){
-                reactions = new HashMap<>();
-            }
-            ElectroCharged electroCharged =(ElectroCharged) reactions.get(ElectroCharged.class);
+            HashMap<Class<? extends Reaction>, Reaction> reactionsMap = ensureReactionsMap();
+            ElectroCharged electroCharged = (ElectroCharged) reactionsMap.get(ElectroCharged.class);
             if(electroCharged != null){
                 if(electroCharged.die){
-                    reactions.remove(ElectroCharged.class);
-                    isElectroCharged=false;
+                    reactionsMap.remove(ElectroCharged.class);
+                    isElectroCharged = false;
                 }else {
                     electroCharged.tick();//运行tick方法
                 }
+            }else{
+                //布尔标志与 Map 失同步的兜底：Map 中无实例则清标志
+                isElectroCharged = false;
             }
         }
         if(isCombustion){
-            if(reactions == null){
-                reactions = new HashMap<>();
-            }
-            Combustion combustion = (Combustion) reactions.get(Combustion.class);
+            HashMap<Class<? extends Reaction>, Reaction> reactionsMap = ensureReactionsMap();
+            Combustion combustion = (Combustion) reactionsMap.get(Combustion.class);
             if(combustion != null){
                 if(combustion.die){
-                    reactions.remove(Combustion.class);
+                    reactionsMap.remove(Combustion.class);
                     isCombustion = false;
                 }else {
                     combustion.tick();
                 }
+            }else{
+                isCombustion = false;
             }
         }
 
@@ -203,228 +209,87 @@ public class ElementContainer {
 
     /*
         下面处理产生元素附着的情况
+
+        resolveReaction 是与 Damage 解耦的结算入口：完成元素附着 / 反应副作用，
+        返回 ReactionOutcome 供伤害侧（LivingEntityMixin）决定是否改写伤害倍率。
+        applyElement 作为返回旧 Reaction 的兼容包装保留（仅返回增幅/持续反应实例，
+        其他情况返回 null），现有未迁移调用方仍可用。
      */
-    public Reaction applyElement(@NotNull Element element, @Nullable DamageSource damageSource){
-        if (damageSource != null) {
-            LivingEntity attacker =(LivingEntity) damageSource.getAttacker();
-            element.setOwner(owner);
-            element.setAttacker(attacker);
+    public ReactionOutcome resolveReaction(@NotNull Element element, @Nullable LivingEntity attacker, @Nullable DamageSource damageSource){
+        /*
+        cannotApply 处理：反应自身引发的二级元素伤害（燃烧/超载/超导/扩散内层）会设 cannotApply，
+        此类伤害不应再触发新一轮元素附着与反应结算，直接返回 NONE。
+        伤害侧据此对 amount 走「有元素但非增幅」的增伤×减抗处理。
+        注意：扩散（Swirl）对外层的 setElement 不设 cannotApply，是传染链设计，原样保留。
+         */
+        if(damageSource instanceof DamageSourceHolder holder){
+            if(holder.getEWDamageSource$EW() != null && holder.getEWDamageSource$EW().isCannotApply()){
+                return ReactionOutcome.NONE;
+            }
         }
 
-        //更新容器的最后攻击者(反应触发者）
-        latestAttacker = element.getAttacker();
+        //绑定 owner / attacker（旧 applyElement :208-212 行为）
+        element.setOwner(owner);
+        element.setAttacker(attacker);
 
-        //获取攻击者的元素精通和元素反应容器
-        ElementContainer attackerElementContainer;
-        if(element.getOwner() instanceof LivingEntityHolder livingEntityHolder){
+        //更新容器的最后攻击者（反应触发者）
+        latestAttacker = attacker;
+
+        //获取攻击者的元素容器（旧 :218-224 行为）
+        ElementContainer attackerElementContainer = null;
+        if(attacker instanceof LivingEntityHolder livingEntityHolder){
             attackerElementContainer = livingEntityHolder.getElementContainer$EW();
         }
-        else{
-            attackerElementContainer = null;
-        }
+
         /*
-         集合为空
+        集合为空：直接附着（风岩除外）
          */
         if (elements.isEmpty()) {
-            if(!(element instanceof Anemo || element instanceof Geo)){//风岩不附着
+            if(!(element instanceof Anemo || element instanceof Geo)){
                 addElement(element);
             }
+            return ReactionOutcome.NONE;
         }
+
         /*
-        如果只有一个元素被附着
+        多元素附着：当前设计只预期 0 或 1 个元素，多于 1 个属异常，记录警告
          */
-        else if (elements.size() == 1) {
-            Element bRElement = elements.iterator().next();
-
-
-
-            double gauge = element.getGauge();//后手元素元素量
-            double beGauge = bRElement.getGauge();//附着元素元素量
-
-            if (bRElement.getClass() == element.getClass()) {
-                bRElement.setGauge(Math.max(gauge, beGauge));
-            }
-            //如若被添加元素为水元素
-            if (element instanceof Hydro) {
-                if (bRElement instanceof Pyro) {//火
-                    bRElement.subGauge(gauge * 2);
-                    //返回反应为蒸发反应
-                    return Reaction.create(Reaction.ReactionType.VAPORIZE,owner,damageSource,bRElement,element);
-                } else if (bRElement instanceof Cryo) {//冰！
-                    //此处生成冻元素
-                    elements.add(new Frozen(Math.min(gauge, beGauge) * 2));
-                    bRElement.subGauge(gauge);
-                    element.subGauge(bRElement.getGauge());
-                    //不返回反应（只是生成冻元素)
-                }
-                else if(bRElement instanceof Frozen){//冻
-                    addElement(element);
-                    //未发生反应
-                }
-                else if (bRElement instanceof Element) {//雷
-                    addElement(element);
-                    if (attackerElementContainer != null) {
-                        if(reactions == null){
-                            reactions = new HashMap<>();
-                        }
-                        if(reactions.get(ElectroCharged.class) == null){
-                            Reaction reaction = Reaction.create(Reaction.ReactionType.ELECTRO_CHARGED,owner,damageSource,bRElement,element);
-                            reactions.put(ElectroCharged.class,reaction);
-                            isElectroCharged = true;
-                            //返回感电反应
-                            return reaction;
-                        }
-                    }
-                }
-                else if (bRElement instanceof Dendro) {//草
-                    /*
-                    这里缺少草反应相关逻辑（还没想好草反应怎么写）
-                     */
-                    bRElement.subGauge(gauge);
-                    return Reaction.create(Reaction.ReactionType.BLOOM,owner,damageSource,bRElement,element);
-                }
-                else {
-                    ElementWorld.LOGGER.warn("ElementApplied Error: Hydro applied to unexpected element {}", bRElement.getClass().getSimpleName());
-                }
-            }
-
-            //如若添加的元素为火
-            if (element instanceof Pyro) {
-                if (bRElement instanceof Hydro) {//水
-                    bRElement.subGauge(gauge * 0.5);
-                    return Reaction.create(Reaction.ReactionType.VAPORIZE,owner,damageSource,bRElement,element);
-                }
-                else if (bRElement instanceof Electro) {//雷
-                    bRElement.subGauge(element.getGauge());
-                    return Reaction.create(Reaction.ReactionType.OVERLOAD,owner,damageSource,bRElement,element);
-                }
-                else if(bRElement instanceof Cryo){//冰！！
-                    bRElement.subGauge(gauge*2);
-                    return Reaction.create(Reaction.ReactionType.MELT,owner,damageSource,bRElement,element);
-                }
-                else if(bRElement instanceof Frozen){
-                    bRElement.subGauge(gauge*2);
-                    return Reaction.create(Reaction.ReactionType.MELT,owner,damageSource,bRElement,element);
-                }
-                else if(bRElement instanceof Dendro){//燃烧（火 to 草）
-                    addElement(element);
-                    if(reactions == null){
-                        reactions = new HashMap<>();
-                    }
-                    if(reactions.get(Combustion.class) == null){
-                        Reaction reaction = Reaction.create(Reaction.ReactionType.COMBUSTION,owner,damageSource,bRElement,element);
-                        reactions.put(Combustion.class,reaction);
-                        isCombustion = true;
-                        return reaction;
-                    }
-                }
-                else{
-                    ElementWorld.LOGGER.warn("ElementApplied Error: Pyro applied to unexpected element {}", bRElement.getClass().getSimpleName());
-                }
-            }
-            //如果添加的元素为雷
-            if(element instanceof Electro){
-                if(bRElement instanceof Pyro){//火：超载
-                    removeElement(bRElement);
-                    return Reaction.create(Reaction.ReactionType.OVERLOAD,owner,damageSource,bRElement,element);
-                }
-                else if(bRElement instanceof Hydro){//水：感电
-                    addElement(element);
-                    if(!isElectroCharged){
-                        isElectroCharged = true;
-                        Reaction reaction = Reaction.create(Reaction.ReactionType.ELECTRO_CHARGED,owner,damageSource,bRElement,element);
-                        if(reactions == null){
-                            reactions = new HashMap<>();
-                        }
-                        reactions.put(ElectroCharged.class,reaction);
-                        return reaction;
-                    }
-                }
-                else if(bRElement instanceof Cryo || bRElement instanceof Frozen){//冰：超导
-                    addElement(element);
-                    return Reaction.create(Reaction.ReactionType.SUPERCONDUCT,owner,damageSource,bRElement,element);
-                }
-                else if(bRElement instanceof Dendro){//激化
-                    addElement(element);
-                    double min = Math.min(gauge, beGauge);
-                    bRElement.subGauge(min);
-                    element.subGauge(min);
-                    /*
-                    生成激元素
-                     */
-                    if (damageSource != null) {
-                        elements.add(new Catalyze(min,getOwner(),element.getAttacker(),damageSource.getSource()));
-                    }else {
-                        elements.add(new Catalyze(min,getOwner(),null,owner));
-                    }
-                    return Reaction.create(Reaction.ReactionType.CATALYZE,owner,damageSource,bRElement,element);
-                }
-                else{
-                    ElementWorld.LOGGER.warn("ElementApplied Error: Electro applied to unexpected element {}", bRElement.getClass().getSimpleName());
-                }
-            }
-            else if(element instanceof Cryo){//后手元素为冰
-                if(bRElement instanceof Hydro){//冰水冻结
-                    bRElement.subGauge(gauge);
-                    element.subGauge(beGauge);
-                    elements.add(new Frozen(Math.min(gauge, beGauge) * 2));
-                }
-                else if(bRElement instanceof Pyro){//冰火融化
-                    bRElement.subGauge(gauge*0.5);
-                    return Reaction.create(Reaction.ReactionType.MELT,owner,damageSource,bRElement,element);
-                }
-                else if(bRElement instanceof Electro){//冰雷超导
-                    addElement(element);
-                    return Reaction.create(Reaction.ReactionType.SUPERCONDUCT,owner,damageSource,bRElement,element);
-                }
-                else if(bRElement instanceof Dendro){//冰草不反应
-                    addElement(element);
-                }
-            }
-            else if(element instanceof Dendro){//后手元素为草
-                if(bRElement instanceof Hydro){//水草绽放
-                    return Reaction.create(Reaction.ReactionType.BLOOM,owner,damageSource,bRElement,element);
-                }
-                else if(bRElement instanceof Pyro){//草火燃烧
-                    addElement(element);
-                    if(reactions == null){
-                        reactions = new HashMap<>();
-                    }
-                    if(reactions.get(Combustion.class) == null){
-                        Reaction reaction = Reaction.create(Reaction.ReactionType.COMBUSTION,owner,damageSource,bRElement,element);
-                        reactions.put(Combustion.class,reaction);
-                        isCombustion = true;
-                        return reaction;
-                    }
-                }
-                else if(bRElement instanceof Electro){//草雷激化
-                    addElement(element);
-                    double min = Math.min(gauge, beGauge);
-                    bRElement.subGauge(min);
-                    element.subGauge(min);
-                    /*
-                    生成激元素
-                     */
-                    if (damageSource != null) {
-                        elements.add(new Catalyze(min,getOwner(),element.getAttacker(),damageSource.getSource()));
-                    }else {
-                        elements.add(new Catalyze(min,getOwner(),null,owner));
-                    }
-
-                    return Reaction.create(Reaction.ReactionType.CATALYZE,owner,damageSource,bRElement,element);
-                }
-            }
-            else if(element instanceof Anemo){//后手风
-                return Reaction.create(Reaction.ReactionType.SWIRL,owner,damageSource,bRElement,element);
-            }
-            else if(element instanceof Geo){//后手岩
-                return Reaction.create(Reaction.ReactionType.CRYSTALLIZE,owner,damageSource,bRElement,element);
-            }
-            else{
-                ElementWorld.LOGGER.warn("Container has a wrong element type: {}", element.getClass().getSimpleName());
-            }
+        if (elements.size() != 1) {
+            ElementWorld.LOGGER.warn("Container has unexpected element count {}: cannot resolve reaction", elements.size());
+            return ReactionOutcome.NONE;
         }
-        return null;
+
+        Element aura = elements.iterator().next();
+        double gauge = element.getGauge();
+        double beGauge = aura.getGauge();
+
+        //同类元素刷新（旧 :244-246）
+        if (aura.getClass() == element.getClass()) {
+            aura.setGauge(Math.max(gauge, beGauge));
+            return ReactionOutcome.NONE;
+        }
+
+        Element.ElementType triggerType = Element.typeOfElementClass(element.getClass());
+        Element.ElementType auraType = Element.typeOfElementClass(aura.getClass());
+        ReactionHandler handler = ReactionTable.get(triggerType, auraType);
+        if (handler == null) {
+            ElementWorld.LOGGER.warn("ElementApplied Error: {} applied to unexpected element {}",
+                    element.getClass().getSimpleName(), aura.getClass().getSimpleName());
+            return ReactionOutcome.NONE;
+        }
+
+        ReactionContext ctx = new ReactionContext(
+                element, aura, owner, attacker, damageSource, this, attackerElementContainer);
+        return handler.handle(ctx);
+    }
+
+    /**
+     * 旧入口的兼容包装。返回 ReactionOutcome（新签名）。
+     * 伤害侧调用方应改用 {@link #resolveReaction}。
+     */
+    public ReactionOutcome applyElement(@NotNull Element element, @Nullable DamageSource damageSource){
+        LivingEntity attacker = damageSource != null ? (LivingEntity) damageSource.getAttacker() : null;
+        return resolveReaction(element, attacker, damageSource);
     }
 
 
@@ -452,6 +317,59 @@ public class ElementContainer {
         if(element instanceof Hydro){
             isWet = false;
         }
+    }
+
+    //==================== 反应 handler 专用的附着 / 注册辅助方法 ====================
+    // 这些方法封装了 handler 对容器内部状态的写操作，避免 handler 直接依赖容器的私有字段。
+    // public 是因为 ReactionTable 位于 com.elementworld.elementComponents.reaction 包（跨包访问）。
+
+    /**
+     * 后手元素直接附着（带 0.8 损耗，等价旧 applyElement 内的 addElement）。
+     * 供 handler 在「该元素需要被附着但不参与反应」时调用（如感电 addElement(trigger)）。
+     */
+    public void addIncomingElement(Element element){
+        addElement(element);
+    }
+
+    /**
+     * 移除附着元素（供 Electro×Pyro 超载的不对称「移除 aura」行为调用）。
+     */
+    public void removeAuraElement(Element aura){
+        removeElement(aura);
+    }
+
+    /**
+     * 添加冻结元素（无损耗，等价旧 applyElement 内的 elements.add(new Frozen(...))）。
+     */
+    public void addFrozenElement(Frozen frozen){
+        elements.add(frozen);
+    }
+
+    /**
+     * 添加激元素（无损耗，等价旧 applyElement 内的 elements.add(new Catalyze(...))）。
+     */
+    public void addCatalyzeElement(Catalyze catalyze){
+        elements.add(catalyze);
+    }
+
+    /**
+     * 确保 reactions Map 已初始化并返回它。供 handler 注册持续反应时调用。
+     */
+    public HashMap<Class<? extends Reaction>, Reaction> ensureReactionsMap(){
+        if(reactions == null){
+            reactions = new HashMap<>();
+        }
+        return reactions;
+    }
+
+    /** 标记已注册感电（供 ReactionTable.registerElectroCharged 调用）。 */
+    public void markElectroCharged(){
+        isElectroCharged = true;
+    }
+
+    /** 标记已注册燃烧（供 ReactionTable.registerCombustion 调用）。 */
+    public void markCombustion(){
+        isCombustion = true;
     }
 
     private void rebuildElementState() {
