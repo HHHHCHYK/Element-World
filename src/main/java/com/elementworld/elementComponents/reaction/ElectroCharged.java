@@ -48,6 +48,8 @@ public class ElectroCharged extends Reaction{
             electro.subGauge(0.4);
 
             DamageSource reactionDamage = DamageSourceHolder.createDamageSource(owner.getWorld(),owner,attacker);
+            ((DamageSourceHolder) reactionDamage).setDamageElement$EW(Element.create(Element.ElementType.ELECTRO, 0));
+            ((DamageSourceHolder) reactionDamage).getEWDamageSource$EW().setCannotApply();
             owner.damage(reactionDamage,damageValue);
 
             double x = owner.getX();double y = owner.getY();double z = owner.getZ();double range = 5;

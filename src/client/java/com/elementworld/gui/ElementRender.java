@@ -1,6 +1,7 @@
 package com.elementworld.gui;
 
 import com.elementworld.ElementWorld;
+import com.elementworld.util.ElementColors;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -30,7 +31,7 @@ public final class ElementRender {
             int y = screenHeight - 54;
 
             for (String element : snapshot) {
-                drawContext.fill(x, y, x + ICON_SIZE, y + ICON_SIZE, colorFor(element));
+                drawContext.fill(x, y, x + ICON_SIZE, y + ICON_SIZE, ElementColors.colorForName(element));
                 drawContext.drawBorder(x, y, ICON_SIZE, ICON_SIZE, 0xAA000000);
                 x += ICON_SIZE;
             }
@@ -52,20 +53,5 @@ public final class ElementRender {
                     });
                 }
         );
-    }
-
-    private static int colorFor(String element) {
-        return switch (element) {
-            case "Anemo" -> 0xFF63E6BE;
-            case "Geo" -> 0xFFE3B341;
-            case "Electro" -> 0xFFB783FF;
-            case "Hydro" -> 0xFF48C6FF;
-            case "Pyro" -> 0xFFFF5A3C;
-            case "Cryo" -> 0xFF9DEBFF;
-            case "Dendro" -> 0xFF6BD65A;
-            case "Frozen" -> 0xFFB7F4FF;
-            case "Catalyze" -> 0xFFB6F15F;
-            default -> 0xFFFFFFFF;
-        };
     }
 }

@@ -17,6 +17,7 @@ public class ElementWorld implements ModInitializer {
     public static final String MOD_ID = "elementworld";
     public static final Identifier ELEMENT_DAMAGE_ID = new Identifier(MOD_ID, "element_damage");
     public static final Identifier ELEMENT_TYPES_PACKET_ID = new Identifier(MOD_ID, "element_types");
+    public static final Identifier FLOATING_TEXT_PACKET_ID = new Identifier(MOD_ID, "floating_text");
     public static final RegistryKey<DamageType> ELEMENT_DAMAGE = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, ELEMENT_DAMAGE_ID);
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 

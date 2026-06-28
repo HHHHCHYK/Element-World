@@ -5,6 +5,7 @@ import com.elementworld.elementComponents.reaction.ReactionOutcome;
 import com.elementworld.elements.EP;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Physics;
+import com.elementworld.floatingtext.FloatingTextService;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
 import com.elementworld.persistence.ElementContainerNbtCodec;
@@ -176,6 +177,12 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                     }
                 }
             }
+        }
+        if (amount > 0) {
+            Element damageElement = source instanceof DamageSourceHolder damageHolder
+                    ? damageHolder.getElement$EW()
+                    : null;
+            FloatingTextService.spawnDamageNumber(thisLivingEntity, amount, damageElement);
         }
         args.set(1, amount);
     }

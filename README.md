@@ -1,52 +1,53 @@
 # ElementWorld
 
-ElementWorld is a Fabric Minecraft mod project for Minecraft 1.20.1. The current codebase focuses on an elemental combat system, including element attachment, elemental reactions, custom damage metadata, HUD rendering, commands, registries, and mixins.
+## 中文
 
-## Requirements
+ElementWorld 是一个让 Minecraft 世界充满元素互动的模组。
 
-- Java toolchain compatible with the project Gradle configuration. The source and target compatibility are Java 17.
-- Gradle Wrapper from this repository.
-- Fabric Loom, Fabric Loader, Yarn mappings, and Fabric API versions are declared in `gradle.properties`.
+在这里，元素不只来自武器，也来自原版世界本身：雨水、河流、火焰、岩浆、冰雪、雷暴、怪物和地形都可能成为元素反应的一部分。玩家使用一把元素武器，就能根据环境和目标状态打出不同效果，而不需要在多把武器之间频繁切换。
 
-Current key versions:
+## 核心体验
 
-- Minecraft: `1.20.1`
-- Yarn mappings: `1.20.1+build.10`
-- Fabric Loader: `0.16.10`
-- Fabric API: `0.92.3+1.20.1`
+- 使用元素武器参与战斗。
+- 利用天气、水、火、冰雪、雷电和地形触发反应。
+- 观察怪物和环境，选择更合适的元素打法。
+- 即使没有触发反应，单一元素也能带来稳定收益。
 
-CI currently builds on Ubuntu with Java 21 and runs `./gradlew build`.
+## 元素方向
 
-## Common Commands
+- Pyro：火焰、燃烧、爆发。
+- Hydro：潮湿、控制、反应触发。
+- Cryo：减速、冻结、寒冷环境。
+- Electro：电荷、连锁、雷暴机会。
+- Anemo：扩散、扰动、环境联动。
+- Geo：结晶、护盾、防御收益。
 
-On Windows PowerShell:
+ElementWorld 的目标不是把战斗变复杂，而是让玩家更自然地利用 Minecraft 世界本身。
 
-```powershell
-.\gradlew.bat tasks --console=plain
-.\gradlew.bat check --console=plain
-.\gradlew.bat build --console=plain
-```
+---
 
-On Unix-like shells:
+# ElementWorld
 
-```bash
-./gradlew tasks --console=plain
-./gradlew check --console=plain
-./gradlew build --console=plain
-```
+## English
 
-`check` includes the project-specific `codeStyleCheck` task when present in `build.gradle`.
+ElementWorld is a Minecraft mod about elemental interactions emerging from the world itself.
 
-## Repository Layout
+Elements do not only come from weapons. Rain, rivers, fire, lava, snow, lightning, monsters, and terrain can all become part of elemental reactions. Players can use a single elemental weapon and respond to the environment, instead of constantly switching between several weapons.
 
-- `src/main/java/com/elementworld/` - common mod code, commands, element model, damage metadata, reactions, modifiers, shields, registries, and mixins.
-- `src/client/java/com/elementworld/` - client entrypoint and HUD rendering.
-- `src/main/resources/` - Fabric mod metadata, mixin config, language files, models, icon, and data resources.
-- `.github/workflows/build.yml` - CI build workflow.
-- `docs/` - human-readable reports and long-form project documents.
-- `.agent/` - agent collaboration reference, current status, reusable memory, and archive notes.
-- `AGENTS.md` - durable instructions future agents should read first.
+## Core Experience
 
-## Current Status
+- Fight with elemental weapons.
+- Use weather, water, fire, snow, lightning, and terrain to trigger reactions.
+- Read monsters and surroundings to choose better elemental approaches.
+- Gain useful effects from a single element, even when no reaction is triggered.
 
-The project is initialized as a Fabric Loom Gradle project. The current working tree may contain uncommitted code-quality and metadata changes; future agents should inspect `git status --short` before editing and must not revert user changes unless explicitly requested.
+## Element Themes
+
+- Pyro: fire, burning, burst damage.
+- Hydro: wet status, control, reaction setup.
+- Cryo: slowing, freezing, cold environments.
+- Electro: charge, chaining, storm opportunities.
+- Anemo: spreading, disruption, environmental interaction.
+- Geo: crystallization, shields, defensive value.
+
+ElementWorld is designed to make the Minecraft world more reactive, not to make combat harder to operate.
