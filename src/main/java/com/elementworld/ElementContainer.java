@@ -6,6 +6,7 @@ import com.elementworld.elementComponents.modifiers.Modifier;
 import com.elementworld.elementComponents.modifiers.Modifiers;
 import com.elementworld.elementComponents.reaction.Combustion;
 import com.elementworld.elementComponents.reaction.ElectroCharged;
+import com.elementworld.elementComponents.reaction.ElementReactionPriority;
 import com.elementworld.elementComponents.reaction.Reaction;
 import com.elementworld.elementComponents.reaction.ReactionContext;
 import com.elementworld.elementComponents.reaction.ReactionHandler;
@@ -14,15 +15,11 @@ import com.elementworld.elementComponents.reaction.ReactionTable;
 import com.elementworld.elementComponents.shield.Shield;
 import com.elementworld.elements.Anemo;
 import com.elementworld.elements.Catalyze;
-import com.elementworld.elements.Cryo;
-import com.elementworld.elements.Dendro;
 import com.elementworld.elements.EP;
-import com.elementworld.elements.Electro;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Frozen;
 import com.elementworld.elements.Geo;
 import com.elementworld.elements.Hydro;
-import com.elementworld.elements.Pyro;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
 import com.elementworld.persistence.ElementContainerState;
@@ -241,46 +238,61 @@ public class ElementContainer {
             attackerElementContainer = livingEntityHolder.getElementContainer$EW();
         }
 
-        /*
-        集合为空：直接附着（风岩除外）
-         */
-        if (elements.isEmpty()) {
-            if(!(element instanceof Anemo || element instanceof Geo)){
-                addElement(element);
-            }
-            return ReactionOutcome.NONE;
-        }
-
-        /*
-        多元素附着：当前设计只预期 0 或 1 个元素，多于 1 个属异常，记录警告
-         */
-        if (elements.size() != 1) {
-            ElementWorld.LOGGER.warn("Container has unexpected element count {}: cannot resolve reaction", elements.size());
-            return ReactionOutcome.NONE;
-        }
-
-        Element aura = elements.iterator().next();
-        double gauge = element.getGauge();
-        double beGauge = aura.getGauge();
-
-        //同类元素刷新（旧 :244-246）
-        if (aura.getClass() == element.getClass()) {
-            aura.setGauge(Math.max(gauge, beGauge));
-            return ReactionOutcome.NONE;
-        }
-
         Element.ElementType triggerType = Element.typeOfElementClass(element.getClass());
-        Element.ElementType auraType = Element.typeOfElementClass(aura.getClass());
-        ReactionHandler handler = ReactionTable.get(triggerType, auraType);
-        if (handler == null) {
-            ElementWorld.LOGGER.warn("ElementApplied Error: {} applied to unexpected element {}",
-                    element.getClass().getSimpleName(), aura.getClass().getSimpleName());
+        if (triggerType == null) {
             return ReactionOutcome.NONE;
         }
 
-        ReactionContext ctx = new ReactionContext(
-                element, aura, owner, attacker, damageSource, this, attackerElementContainer);
-        return handler.handle(ctx);
+        boolean reacted = false;
+        ReactionOutcome finalOutcome = ReactionOutcome.NONE;
+        int guard = 0;
+
+        while (element.getGauge() > 0 && guard++ < 16) {
+            removeDeadElements();
+
+            Element aura = ElementReactionPriority.selectAura(triggerType, elements);
+            if (aura == null) {
+                break;
+            }
+
+            Element.ElementType auraType = Element.typeOfElementClass(aura.getClass());
+            ReactionHandler handler = ReactionTable.get(triggerType, auraType);
+            if (handler == null) {
+                break;
+            }
+
+            double triggerBefore = element.getGauge();
+            double auraBefore = aura.getGauge();
+            boolean auraWasPresent = elements.contains(aura);
+
+            ReactionContext ctx = new ReactionContext(
+                    element, aura, owner, attacker, damageSource, this, attackerElementContainer);
+            ReactionOutcome outcome = handler.handle(ctx);
+            removeDeadElements();
+
+            if (outcome != ReactionOutcome.NONE) {
+                reacted = true;
+                finalOutcome = mergeOutcome(finalOutcome, outcome);
+            } else {
+                return finalOutcome;
+            }
+
+            boolean progressed = element.getGauge() < triggerBefore
+                    || aura.getGauge() < auraBefore
+                    || (auraWasPresent && !elements.contains(aura));
+            if (!progressed) {
+                ElementWorld.LOGGER.warn("Element reaction made no gauge progress: trigger={}, aura={}",
+                        triggerType, auraType);
+                break;
+            }
+        }
+
+        if (!reacted && element.getGauge() > 0 && !(element instanceof Anemo || element instanceof Geo)) {
+            addElement(element);
+        }
+
+        removeDeadElements();
+        return finalOutcome;
     }
 
     /**
@@ -297,40 +309,80 @@ public class ElementContainer {
     /*
     private方法
      */
-    //这个是带有损耗的元素附着模式
+    // Element attachment with attach decay.
     private void addElement(Element element){
-        element.setGauge(element.getGauge()*0.8);//元素附着损耗
-        if(element instanceof Hydro){
-            isWet = true;
+        Element existing = findElement(element.getClass());
+        double attachedGauge = element.getGauge() * ReactionTable.ATTACH_DECAY;
+        if (existing != null) {
+            existing.setGauge(Math.max(existing.getGauge(), attachedGauge));
+        } else {
+            element.setGauge(attachedGauge);
+            element.setOwner(owner);
+            elements.add(element);
         }
-        elements.add(element);
+        rebuildElementState();
     }
 
-    //移除对应元素
+    // Remove an attached element.
     private void removeElement(Element element){
         elements.remove(element);
+        rebuildElementState();
+    }
 
-        //懒加载这个映射
-        if(hasElement == null){hasElement = new HashMap<>();}
-        //当被移除的时候，将存在映射设置为不存在
-        hasElement.put(element.getClass(),false);
-        if(element instanceof Hydro){
-            isWet = false;
+    private Element findElement(Class<? extends Element> elementClass) {
+        for (Element element : elements) {
+            if (element.getClass() == elementClass) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    private Element copyElement(Element element) {
+        Element.ElementType elementType = Element.typeOfElementClass(element.getClass());
+        if (elementType == null) {
+            return null;
+        }
+        Element copy = Element.create(elementType, element.getGauge());
+        if (copy != null) {
+            copy.setOwner(owner);
+            copy.setAttacker(element.getAttacker());
+        }
+        return copy;
+    }
+
+    private void removeDeadElements() {
+        deadElements.clear();
+        for (Element element : elements) {
+            if (element.getGauge() <= 0) {
+                deadElements.add(element);
+            }
+        }
+        for (Element element : deadElements) {
+            removeElement(element);
+        }
+        deadElements.clear();
+    }
+
+    private ReactionOutcome mergeOutcome(ReactionOutcome current, ReactionOutcome next) {
+        if (current instanceof ReactionOutcome.Amplified) {
+            return current;
+        }
+        if (next instanceof ReactionOutcome.Amplified) {
+            return next;
+        }
+        if (current == ReactionOutcome.NONE) {
+            return next;
+        }
+        return current;
+    }
+
+    public void addIncomingElement(Element element){
+        Element copy = copyElement(element);
+        if (copy != null) {
+            addElement(copy);
         }
     }
-
-    //==================== 反应 handler 专用的附着 / 注册辅助方法 ====================
-    // 这些方法封装了 handler 对容器内部状态的写操作，避免 handler 直接依赖容器的私有字段。
-    // public 是因为 ReactionTable 位于 com.elementworld.elementComponents.reaction 包（跨包访问）。
-
-    /**
-     * 后手元素直接附着（带 0.8 损耗，等价旧 applyElement 内的 addElement）。
-     * 供 handler 在「该元素需要被附着但不参与反应」时调用（如感电 addElement(trigger)）。
-     */
-    public void addIncomingElement(Element element){
-        addElement(element);
-    }
-
     /**
      * 移除附着元素（供 Electro×Pyro 超载的不对称「移除 aura」行为调用）。
      */
@@ -342,16 +394,28 @@ public class ElementContainer {
      * 添加冻结元素（无损耗，等价旧 applyElement 内的 elements.add(new Frozen(...))）。
      */
     public void addFrozenElement(Frozen frozen){
-        elements.add(frozen);
+        Element existing = findElement(Frozen.class);
+        if (existing != null) {
+            existing.setGauge(Math.max(existing.getGauge(), frozen.getGauge()));
+        } else {
+            frozen.setOwner(owner);
+            elements.add(frozen);
+        }
+        rebuildElementState();
     }
-
     /**
      * 添加激元素（无损耗，等价旧 applyElement 内的 elements.add(new Catalyze(...))）。
      */
     public void addCatalyzeElement(Catalyze catalyze){
-        elements.add(catalyze);
+        Element existing = findElement(Catalyze.class);
+        if (existing != null) {
+            existing.setGauge(Math.max(existing.getGauge(), catalyze.getGauge()));
+        } else {
+            catalyze.setOwner(owner);
+            elements.add(catalyze);
+        }
+        rebuildElementState();
     }
-
     /**
      * 确保 reactions Map 已初始化并返回它。供 handler 注册持续反应时调用。
      */
@@ -536,15 +600,8 @@ public class ElementContainer {
     }
 
     public boolean has(Class<? extends Element> c){
-        if(hasElement == null){
-            return false;
-        }
-        if (hasElement.get(c) == null){
-            return false;
-        }
-        return hasElement.get(c);
+        return findElement(c) != null;
     }
-
     public boolean isImmune(Class<? extends EP> eop){
         return immuneSet.contains(eop);
     }
