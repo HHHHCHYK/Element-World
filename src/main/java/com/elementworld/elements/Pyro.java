@@ -3,6 +3,7 @@ package com.elementworld.elements;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 
+/* 火 */
 public class Pyro extends Element{
     public Pyro(double gauge) {
         super(gauge);

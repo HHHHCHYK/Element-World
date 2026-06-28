@@ -5,5 +5,12 @@
   "commands.elementworld.target.invalid": "\u76ee\u6807\u5fc5\u987b\u662f\u751f\u7269\u5b9e\u4f53\u3002",
   "death.attack.element_damage": "%1$s \u53d7\u5230\u4e86\u5143\u7d20\u80fd\u91cf\u7684\u4f24\u5bb3",
   "death.attack.element_damage.player": "%1$s \u53d7\u5230\u4e86 %2$s \u7684\u5143\u7d20\u80fd\u91cf\u4f24\u5bb3",
+  "enchantment.elementworld.anemo_infusion": "\u98ce\u5143\u7d20\u9644\u9b54",
+  "enchantment.elementworld.cryo_infusion": "\u51b0\u5143\u7d20\u9644\u9b54",
+  "enchantment.elementworld.dendro_infusion": "\u8349\u5143\u7d20\u9644\u9b54",
+  "enchantment.elementworld.electro_infusion": "\u96f7\u5143\u7d20\u9644\u9b54",
+  "enchantment.elementworld.geo_infusion": "\u5ca9\u5143\u7d20\u9644\u9b54",
+  "enchantment.elementworld.hydro_infusion": "\u6c34\u5143\u7d20\u9644\u9b54",
+  "enchantment.elementworld.pyro_infusion": "\u706b\u5143\u7d20\u9644\u9b54",
   "item.elementworld.gui_stick.used": "GUI \u6728\u68cd\u5df2\u4f7f\u7528"
 }

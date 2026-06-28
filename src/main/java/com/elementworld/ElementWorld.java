@@ -3,6 +3,7 @@ package com.elementworld;
 import com.elementworld.command.Commands;
 import com.elementworld.registers.ItemRegistry;
 import com.elementworld.registers.ModArgumentTypes;
+import com.elementworld.registers.ModEnchantments;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.entity.damage.DamageType;
@@ -25,6 +26,7 @@ public class ElementWorld implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Initializing ElementWorld");
         ItemRegistry.registerItems();
+        ModEnchantments.register();
         ModArgumentTypes.register();
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> Commands.register(dispatcher));
     }

@@ -5,5 +5,12 @@
   "commands.elementworld.target.invalid": "Target must be a living entity.",
   "death.attack.element_damage": "%1$s was damaged by elemental energy",
   "death.attack.element_damage.player": "%1$s was damaged by elemental energy from %2$s",
+  "enchantment.elementworld.anemo_infusion": "Anemo Infusion",
+  "enchantment.elementworld.cryo_infusion": "Cryo Infusion",
+  "enchantment.elementworld.dendro_infusion": "Dendro Infusion",
+  "enchantment.elementworld.electro_infusion": "Electro Infusion",
+  "enchantment.elementworld.geo_infusion": "Geo Infusion",
+  "enchantment.elementworld.hydro_infusion": "Hydro Infusion",
+  "enchantment.elementworld.pyro_infusion": "Pyro Infusion",
   "item.elementworld.gui_stick.used": "GUI stick used"
 }
