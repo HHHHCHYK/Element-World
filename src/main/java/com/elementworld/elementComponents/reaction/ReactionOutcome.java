@@ -11,7 +11,8 @@ package com.elementworld.elementComponents.reaction;
  *   <li>{@link Amplified}    —— 增幅反应（蒸发 / 融化），携带倍率与精通乘数。</li>
  * </ul>
  */
-public sealed interface ReactionOutcome permits ReactionOutcome.None, ReactionOutcome.ReactionOccurred, ReactionOutcome.Amplified {
+public sealed interface ReactionOutcome permits ReactionOutcome.None, ReactionOutcome.ReactionOccurred,
+        ReactionOutcome.Amplified, ReactionOutcome.Additive {
 
     /** 无反应发生。元素直接附着或被忽略。 */
     None NONE = None.INSTANCE;
@@ -50,5 +51,8 @@ public sealed interface ReactionOutcome permits ReactionOutcome.None, ReactionOu
         public static Amplified weak(double masteryMultiplier) {
             return new Amplified(1.5, masteryMultiplier);
         }
+    }
+
+    record Additive(Reaction.ReactionType reactionType, String label, double bonusDamage) implements ReactionOutcome {
     }
 }

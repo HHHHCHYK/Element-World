@@ -141,6 +141,9 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                                 }
                                 amount = (float) (amount * (1 - ownContainer.getResistanceValue(elementType)));
                             } else {
+                                if (outcome instanceof ReactionOutcome.Additive additive) {
+                                    amount = (float) (amount + additive.bonusDamage());
+                                }
                                 // NONE / REACTION_OCCURRED：有元素但非增幅（含 cannotApply 二级伤害）
                                 if (attackerContainer != null) {
                                     amount = (float) (amount * (1 + attackerContainer.getBonusValue(elementType)));

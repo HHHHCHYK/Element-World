@@ -371,6 +371,12 @@ public class ElementContainer {
         if (next instanceof ReactionOutcome.Amplified) {
             return next;
         }
+        if (current instanceof ReactionOutcome.Additive) {
+            return current;
+        }
+        if (next instanceof ReactionOutcome.Additive) {
+            return next;
+        }
         if (current == ReactionOutcome.NONE) {
             return next;
         }

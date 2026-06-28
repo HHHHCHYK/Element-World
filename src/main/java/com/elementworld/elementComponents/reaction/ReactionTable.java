@@ -4,6 +4,9 @@ import com.elementworld.ElementContainer;
 import com.elementworld.elements.Catalyze;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Frozen;
+import com.elementworld.floatingtext.FloatingTextService;
+import com.elementworld.util.ElementColors;
+import net.minecraft.util.math.Vec3d;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +18,9 @@ public final class ReactionTable {
     public static final double ATTACH_DECAY = 0.8;
     public static final double STRONG_MUL = 2.0;
     public static final double WEAK_MUL = 0.5;
+    public static final double CATALYZE_LEVEL_MULTIPLIER = 1664.0;
+    public static final double AGGRAVATE_MUL = 1.15;
+    public static final double SPREAD_MUL = 1.25;
 
     private static final Map<Element.ElementType, Map<Element.ElementType, ReactionHandler>> TABLE = new HashMap<>();
 
@@ -102,6 +108,8 @@ public final class ReactionTable {
             Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
             return ReactionOutcome.REACTION_OCCURRED;
         });
+        register(Element.ElementType.ELECTRO, Element.ElementType.QUICKEN, ctx ->
+                catalyzeAdditive(ctx, AGGRAVATE_MUL, "Aggravate", Element.ElementType.ELECTRO, true));
 
         register(Element.ElementType.CRYO, Element.ElementType.HYDRO, ctx -> {
             freeze(ctx);
@@ -139,6 +147,8 @@ public final class ReactionTable {
             Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
             return ReactionOutcome.REACTION_OCCURRED;
         });
+        register(Element.ElementType.DENDRO, Element.ElementType.QUICKEN, ctx ->
+                catalyzeAdditive(ctx, SPREAD_MUL, "Spread", Element.ElementType.DENDRO, false));
 
         register(Element.ElementType.ANEMO, Element.ElementType.PYRO, swirl());
         register(Element.ElementType.ANEMO, Element.ElementType.HYDRO, swirl());
@@ -206,6 +216,49 @@ public final class ReactionTable {
         Object sourceEntity = ctx.source() != null ? ctx.source().getSource() : ctx.owner();
         ctx.ownerContainer().addCatalyzeElement(new Catalyze(
                 used, ctx.owner(), ctx.attacker(), (net.minecraft.entity.Entity) sourceEntity));
+        spawnReactionLabel(ctx, "Quicken", Element.ElementType.QUICKEN);
+    }
+
+    private static ReactionOutcome.Additive catalyzeAdditive(
+            ReactionContext ctx,
+            double reactionCoefficient,
+            String label,
+            Element.ElementType feedbackColor,
+            boolean attachTrigger
+    ) {
+        if (attachTrigger) {
+            ctx.ownerContainer().addIncomingElement(ctx.trigger());
+        }
+        ctx.trigger().subGauge(ctx.trigger().getGauge());
+        Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
+        spawnReactionLabel(ctx, label, feedbackColor);
+        return new ReactionOutcome.Additive(
+                Reaction.ReactionType.CATALYZE,
+                label,
+                catalyzeBonusDamage(ctx, reactionCoefficient)
+        );
+    }
+
+    private static double catalyzeBonusDamage(ReactionContext ctx, double reactionCoefficient) {
+        double mastery = ctx.attackerContainer() != null ? ctx.attackerContainer().getMastery() : 0.0;
+        return CATALYZE_LEVEL_MULTIPLIER
+                * reactionCoefficient
+                * (1.0 + (5.0 * mastery) / (mastery + 1200.0));
+    }
+
+    private static void spawnReactionLabel(
+            ReactionContext ctx,
+            String label,
+            Element.ElementType feedbackColor
+    ) {
+        FloatingTextService.spawnAroundEntity(
+                ctx.owner(),
+                label,
+                ElementColors.colorFor(feedbackColor),
+                FloatingTextService.DEFAULT_LIFETIME_TICKS,
+                new Vec3d(0.0D, ctx.owner().getHeight() + 0.7D, 0.0D),
+                new Vec3d(0.0D, 0.035D, 0.0D)
+        );
     }
 
     public static double freezeFormula(double triggerGauge, double auraGauge) {
