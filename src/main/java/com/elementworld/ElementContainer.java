@@ -38,11 +38,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class ElementContainer {
@@ -243,14 +246,14 @@ public class ElementContainer {
             return ReactionOutcome.NONE;
         }
 
-        boolean reacted = false;
         ReactionOutcome finalOutcome = ReactionOutcome.NONE;
-        int guard = 0;
+        boolean ordinaryReacted = false;
+        Set<Element> handledAuras = Collections.newSetFromMap(new IdentityHashMap<>());
 
-        while (element.getGauge() > 0 && guard++ < 16) {
+        for (int selectionCount = 0; selectionCount < 10 && element.getGauge() > 0; selectionCount++) {
             removeDeadElements();
 
-            Element aura = ElementReactionPriority.selectAura(triggerType, elements);
+            Element aura = ElementReactionPriority.selectAura(triggerType, elements, handledAuras);
             if (aura == null) {
                 break;
             }
@@ -266,13 +269,13 @@ public class ElementContainer {
             boolean auraWasPresent = elements.contains(aura);
 
             ReactionContext ctx = new ReactionContext(
-                    element, aura, owner, attacker, damageSource, this, attackerElementContainer);
+                    element, aura, owner, attacker, damageSource, this, attackerElementContainer, finalOutcome);
             ReactionOutcome outcome = handler.handle(ctx);
             removeDeadElements();
 
             if (outcome != ReactionOutcome.NONE) {
-                reacted = true;
-                finalOutcome = mergeOutcome(finalOutcome, outcome);
+                handledAuras.add(aura);
+                finalOutcome = outcome;
             } else {
                 return finalOutcome;
             }
@@ -281,13 +284,17 @@ public class ElementContainer {
                     || aura.getGauge() < auraBefore
                     || (auraWasPresent && !elements.contains(aura));
             if (!progressed) {
+                if (ReactionTable.isNonConsuming(triggerType, auraType)) {
+                    continue;
+                }
                 ElementWorld.LOGGER.warn("Element reaction made no gauge progress: trigger={}, aura={}",
                         triggerType, auraType);
                 break;
             }
+            ordinaryReacted = true;
         }
 
-        if (!reacted && element.getGauge() > 0 && !(element instanceof Anemo || element instanceof Geo)) {
+        if (!ordinaryReacted && element.getGauge() > 0 && !(element instanceof Anemo || element instanceof Geo)) {
             addElement(element);
         }
 
@@ -365,28 +372,6 @@ public class ElementContainer {
             removeElement(element);
         }
         deadElements.clear();
-    }
-
-    private ReactionOutcome mergeOutcome(ReactionOutcome current, ReactionOutcome next) {
-        if (current instanceof ReactionOutcome.Amplified) {
-            return current;
-        }
-        if (next instanceof ReactionOutcome.Amplified) {
-            return next;
-        }
-        if (current instanceof ReactionOutcome.Additive) {
-            return current;
-        }
-        if (next instanceof ReactionOutcome.Additive) {
-            return next;
-        }
-        if (current == ReactionOutcome.NONE) {
-            return next;
-        }
-        if (current.feedback() == null && next.feedback() != null) {
-            return next;
-        }
-        return current;
     }
 
     @Nullable

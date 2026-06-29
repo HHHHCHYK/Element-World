@@ -4,6 +4,8 @@ import com.elementworld.ElementContainer;
 import com.elementworld.elements.Catalyze;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Frozen;
+import com.elementworld.floatingtext.FloatingTextService;
+import net.minecraft.text.Text;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,10 +44,6 @@ public final class ReactionTable {
         register(Element.ElementType.HYDRO, Element.ElementType.CRYO, ctx -> {
             freeze(ctx);
             return occurred(ctx, FREEZE_KEY);
-        });
-        register(Element.ElementType.HYDRO, Element.ElementType.FROZEN, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            return ReactionOutcome.NONE;
         });
         register(Element.ElementType.HYDRO, Element.ElementType.ELECTRO, ctx -> {
             Element triggerAttachment = ctx.ownerContainer().addIncomingElement(ctx.trigger());
@@ -108,13 +106,12 @@ public final class ReactionTable {
             return occurred(ctx, SUPERCONDUCT_KEY);
         });
         register(Element.ElementType.ELECTRO, Element.ElementType.DENDRO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
             applyCatalyze(ctx);
             Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
             return occurred(ctx, QUICKEN_KEY);
         });
         register(Element.ElementType.ELECTRO, Element.ElementType.QUICKEN, ctx ->
-                catalyzeAdditive(ctx, AGGRAVATE_MUL, "Aggravate", AGGRAVATE_KEY, true));
+                catalyzeAdditive(ctx, AGGRAVATE_MUL, "Aggravate", AGGRAVATE_KEY));
 
         register(Element.ElementType.CRYO, Element.ElementType.HYDRO, ctx -> {
             freeze(ctx);
@@ -128,10 +125,6 @@ public final class ReactionTable {
             applySuperconduct(ctx);
             return occurred(ctx, SUPERCONDUCT_KEY);
         });
-        register(Element.ElementType.CRYO, Element.ElementType.DENDRO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            return ReactionOutcome.NONE;
-        });
 
         register(Element.ElementType.DENDRO, Element.ElementType.HYDRO, ctx -> {
             applyBloom(ctx);
@@ -144,27 +137,31 @@ public final class ReactionTable {
             return occurred(ctx, COMBUSTION_KEY);
         });
         register(Element.ElementType.DENDRO, Element.ElementType.ELECTRO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
             applyCatalyze(ctx);
             Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
             return occurred(ctx, QUICKEN_KEY);
         });
         register(Element.ElementType.DENDRO, Element.ElementType.QUICKEN, ctx ->
-                catalyzeAdditive(ctx, SPREAD_MUL, "Spread", SPREAD_KEY, false));
+                catalyzeAdditive(ctx, SPREAD_MUL, "Spread", SPREAD_KEY));
 
         register(Element.ElementType.ANEMO, Element.ElementType.PYRO, swirl());
         register(Element.ElementType.ANEMO, Element.ElementType.HYDRO, swirl());
         register(Element.ElementType.ANEMO, Element.ElementType.CRYO, swirl());
         register(Element.ElementType.ANEMO, Element.ElementType.ELECTRO, swirl());
-        register(Element.ElementType.ANEMO, Element.ElementType.DENDRO, swirl());
         register(Element.ElementType.ANEMO, Element.ElementType.FROZEN, swirl());
 
         register(Element.ElementType.GEO, Element.ElementType.PYRO, crystallize());
         register(Element.ElementType.GEO, Element.ElementType.HYDRO, crystallize());
         register(Element.ElementType.GEO, Element.ElementType.CRYO, crystallize());
         register(Element.ElementType.GEO, Element.ElementType.ELECTRO, crystallize());
-        register(Element.ElementType.GEO, Element.ElementType.DENDRO, crystallize());
         register(Element.ElementType.GEO, Element.ElementType.FROZEN, crystallize());
+
+        register(Element.ElementType.PYRO, Element.ElementType.QUICKEN, ctx -> {
+            Element triggerAttachment = ctx.ownerContainer().addIncomingElement(ctx.trigger());
+            registerCombustion(ctx, triggerAttachment);
+            consumeTrigger(ctx);
+            return occurred(ctx, COMBUSTION_KEY);
+        });
     }
 
     private ReactionTable() {
@@ -175,26 +172,37 @@ public final class ReactionTable {
         return row == null ? null : row.get(aura);
     }
 
+    public static boolean isNonConsuming(Element.ElementType trigger, Element.ElementType aura) {
+        return (trigger == Element.ElementType.ELECTRO || trigger == Element.ElementType.DENDRO)
+                && aura == Element.ElementType.QUICKEN;
+    }
+
     private static void register(Element.ElementType trigger, Element.ElementType aura, ReactionHandler handler) {
         TABLE.computeIfAbsent(trigger, t -> new HashMap<>()).put(aura, handler);
     }
 
-    private static ReactionOutcome.Amplified amplified(ReactionContext ctx, boolean strong, String translationKey) {
+    private static ReactionOutcome amplified(ReactionContext ctx, boolean strong, String translationKey) {
         double masteryMul = ctx.attackerContainer() != null
                 ? AmpReaction.getMasteryAmp(ctx.attackerContainer().getMastery())
                 : 1.0;
-        ReactionOutcome.Feedback feedback = feedback(ctx, translationKey);
-        return strong
-                ? ReactionOutcome.Amplified.strong(masteryMul, feedback)
-                : ReactionOutcome.Amplified.weak(masteryMul, feedback);
+        spawnFeedback(ctx, translationKey);
+        ReactionOutcome.Amplified current = strong
+                ? ReactionOutcome.Amplified.strong(masteryMul)
+                : ReactionOutcome.Amplified.weak(masteryMul);
+        return mergeOutcome(ctx.previousOutcome(), current);
     }
 
-    private static ReactionOutcome.ReactionOccurred occurred(ReactionContext ctx, String translationKey) {
-        return ReactionOutcome.occurred(translationKey, triggerType(ctx));
+    private static ReactionOutcome occurred(ReactionContext ctx, String translationKey) {
+        spawnFeedback(ctx, translationKey);
+        return mergeOutcome(ctx.previousOutcome(), ReactionOutcome.REACTION_OCCURRED);
     }
 
-    private static ReactionOutcome.Feedback feedback(ReactionContext ctx, String translationKey) {
-        return new ReactionOutcome.Feedback(translationKey, triggerType(ctx));
+    private static void spawnFeedback(ReactionContext ctx, String translationKey) {
+        FloatingTextService.spawnReactionLabel(
+                ctx.owner(),
+                Text.translatable(translationKey),
+                triggerType(ctx)
+        );
     }
 
     private static Element.ElementType triggerType(ReactionContext ctx) {
@@ -254,24 +262,21 @@ public final class ReactionTable {
         Reaction.create(Reaction.ReactionType.SUPERCONDUCT, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger()).apply();
     }
 
-    private static ReactionOutcome.Additive catalyzeAdditive(
+    private static ReactionOutcome catalyzeAdditive(
             ReactionContext ctx,
             double reactionCoefficient,
             String label,
-            String translationKey,
-            boolean attachTrigger
+            String translationKey
     ) {
-        if (attachTrigger) {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-        }
-        ctx.trigger().subGauge(ctx.trigger().getGauge());
+        // Aggravate / Spread are additive reactions and do not consume any element.
         Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
-        return new ReactionOutcome.Additive(
+        spawnFeedback(ctx, translationKey);
+        ReactionOutcome.Additive current = new ReactionOutcome.Additive(
                 Reaction.ReactionType.CATALYZE,
                 label,
-                catalyzeBonusDamage(ctx, reactionCoefficient),
-                feedback(ctx, translationKey)
+                catalyzeBonusDamage(ctx, reactionCoefficient)
         );
+        return mergeOutcome(ctx.previousOutcome(), current);
     }
 
     private static double catalyzeBonusDamage(ReactionContext ctx, double reactionCoefficient) {
@@ -331,5 +336,24 @@ public final class ReactionTable {
             consumeTrigger(ctx);
             return occurred(ctx, CRYSTALLIZE_KEY);
         };
+    }
+
+    private static ReactionOutcome mergeOutcome(ReactionOutcome previous, ReactionOutcome current) {
+        if (previous instanceof ReactionOutcome.Amplified) {
+            return previous;
+        }
+        if (current instanceof ReactionOutcome.Amplified) {
+            return current;
+        }
+        if (previous instanceof ReactionOutcome.Additive) {
+            return previous;
+        }
+        if (current instanceof ReactionOutcome.Additive) {
+            return current;
+        }
+        if (previous == ReactionOutcome.NONE) {
+            return current;
+        }
+        return previous;
     }
 }

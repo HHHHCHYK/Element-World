@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
  * @param source               触发反应的 DamageSource；可为 {@code null}（非伤害入口）。
  * @param ownerContainer       被附着者容器，供 handler 注册持续反应 / 增删元素 / 取精通。
  * @param attackerContainer    攻击者容器；可为 {@code null}。增幅反应的精通乘数取自此容器。
+ * @param previousOutcome      本次攻击中上一个反应结算后的结果，由当前反应决定如何合并。
  */
 public record ReactionContext(
         Element trigger,
@@ -24,6 +25,7 @@ public record ReactionContext(
         @Nullable LivingEntity attacker,
         @Nullable DamageSource source,
         ElementContainer ownerContainer,
-        @Nullable ElementContainer attackerContainer
+        @Nullable ElementContainer attackerContainer,
+        ReactionOutcome previousOutcome
 ) {
 }

@@ -1,6 +1,5 @@
 package com.elementworld.elementComponents.reaction;
 
-import com.elementworld.elements.Dendro;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Pyro;
 import com.elementworld.interfaces.DamageSourceHolder;
@@ -11,7 +10,7 @@ import net.minecraft.entity.damage.DamageSource;
 
 public class Combustion extends Reaction{
     private final Pyro pyro;
-    private final Dendro dendro;
+    private final Class<? extends Element> plantElementClass;
     private FireElement fireElement;
     public boolean die = false;
 
@@ -21,11 +20,11 @@ public class Combustion extends Reaction{
         super(owner, damageSource, firstElement, secondElement);
         if(firstElement instanceof Pyro){
             pyro = (Pyro) firstElement;
-            dendro = (Dendro) secondElement;
+            plantElementClass = secondElement.getClass();
         }
         else{
             pyro = (Pyro) secondElement;
-            dendro = (Dendro) firstElement;
+            plantElementClass = firstElement.getClass();
         }
         //反应伤害已在父类构造函数中依据 attacker 容器的精通加成计算完毕,这里无需重复计算
     }
@@ -33,7 +32,7 @@ public class Combustion extends Reaction{
     public void tick(){
         //后加载燃元素实例
         if(fireElement == null){
-            fireElement = new FireElement(2, owner, attacker, owner);
+            fireElement = new FireElement(2, owner, attacker, owner, plantElementClass);
         }
 
         //如果燃元素还没有die，执行tick（）方法
@@ -65,15 +64,23 @@ public class Combustion extends Reaction{
 
     private static class FireElement extends Element{
         public boolean isDie = false;
+        private final Class<? extends Element> plantElementClass;
 
-        public FireElement(double gauge, LivingEntity owner, LivingEntity attacker, Entity source) {
+        public FireElement(
+                double gauge,
+                LivingEntity owner,
+                LivingEntity attacker,
+                Entity source,
+                Class<? extends Element> plantElementClass
+        ) {
             super(gauge, owner, attacker, source);
+            this.plantElementClass = plantElementClass;
             decaySpeed = 0;
         }
 
         public void tick(){
             super.tick();
-            if(!((LivingEntityHolder)owner).getElementContainer$EW().has(Dendro.class)){
+            if(!((LivingEntityHolder)owner).getElementContainer$EW().has(plantElementClass)){
                 gauge = -1;
             }
 
