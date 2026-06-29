@@ -38,7 +38,7 @@ public final class FloatingTextRenderer {
                     double x = buf.readDouble();
                     double y = buf.readDouble();
                     double z = buf.readDouble();
-                    String text = buf.readString();
+                    Text text = buf.readText();
                     int color = buf.readInt();
                     int lifetime = buf.readInt();
                     double velocityX = buf.readDouble();
@@ -91,10 +91,10 @@ public final class FloatingTextRenderer {
         private final int lifetime;
         private int age;
 
-        private FloatingText(Vec3d position, Vec3d velocity, String text, int color, int lifetime) {
+        private FloatingText(Vec3d position, Vec3d velocity, Text text, int color, int lifetime) {
             this.position = position;
             this.velocity = velocity;
-            this.text = Text.literal(text);
+            this.text = text;
             this.color = color;
             this.lifetime = Math.max(lifetime, 1);
         }

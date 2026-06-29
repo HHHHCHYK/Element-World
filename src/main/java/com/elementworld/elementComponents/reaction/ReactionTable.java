@@ -4,9 +4,6 @@ import com.elementworld.ElementContainer;
 import com.elementworld.elements.Catalyze;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Frozen;
-import com.elementworld.floatingtext.FloatingTextService;
-import com.elementworld.util.ElementColors;
-import net.minecraft.util.math.Vec3d;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,63 +15,75 @@ public final class ReactionTable {
     public static final double ATTACH_DECAY = 0.8;
     public static final double STRONG_MUL = 2.0;
     public static final double WEAK_MUL = 0.5;
-    public static final double CATALYZE_LEVEL_MULTIPLIER = 1664.0;
+    public static final double CATALYZE_LEVEL_MULTIPLIER = 5.0;
     public static final double AGGRAVATE_MUL = 1.15;
     public static final double SPREAD_MUL = 1.25;
+    private static final String VAPORIZE_KEY = "reaction.elementworld.vaporize";
+    private static final String MELT_KEY = "reaction.elementworld.melt";
+    private static final String OVERLOAD_KEY = "reaction.elementworld.overload";
+    private static final String ELECTRO_CHARGED_KEY = "reaction.elementworld.electro_charged";
+    private static final String SUPERCONDUCT_KEY = "reaction.elementworld.superconduct";
+    private static final String COMBUSTION_KEY = "reaction.elementworld.combustion";
+    private static final String SWIRL_KEY = "reaction.elementworld.swirl";
+    private static final String BLOOM_KEY = "reaction.elementworld.bloom";
+    private static final String CRYSTALLIZE_KEY = "reaction.elementworld.crystallize";
+    private static final String FREEZE_KEY = "reaction.elementworld.freeze";
+    private static final String QUICKEN_KEY = "reaction.elementworld.quicken";
+    private static final String AGGRAVATE_KEY = "reaction.elementworld.aggravate";
+    private static final String SPREAD_KEY = "reaction.elementworld.spread";
 
     private static final Map<Element.ElementType, Map<Element.ElementType, ReactionHandler>> TABLE = new HashMap<>();
 
     static {
         register(Element.ElementType.HYDRO, Element.ElementType.PYRO, ctx -> {
             consumeAuraByTrigger(ctx, STRONG_MUL);
-            return amplified(ctx, true);
+            return amplified(ctx, true, VAPORIZE_KEY);
         });
         register(Element.ElementType.HYDRO, Element.ElementType.CRYO, ctx -> {
             freeze(ctx);
-            return ReactionOutcome.REACTION_OCCURRED;
+            return occurred(ctx, FREEZE_KEY);
         });
         register(Element.ElementType.HYDRO, Element.ElementType.FROZEN, ctx -> {
             ctx.ownerContainer().addIncomingElement(ctx.trigger());
             return ReactionOutcome.NONE;
         });
         register(Element.ElementType.HYDRO, Element.ElementType.ELECTRO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            consumeBoth(ctx);
-            registerElectroCharged(ctx);
-            return ReactionOutcome.REACTION_OCCURRED;
+            Element triggerAttachment = ctx.ownerContainer().addIncomingElement(ctx.trigger());
+            registerElectroCharged(ctx, triggerAttachment);
+            consumeTrigger(ctx);
+            return occurred(ctx, ELECTRO_CHARGED_KEY);
         });
         register(Element.ElementType.HYDRO, Element.ElementType.DENDRO, ctx -> {
-            consumeBoth(ctx);
-            Reaction.create(Reaction.ReactionType.BLOOM, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
-            return ReactionOutcome.REACTION_OCCURRED;
+            applyBloom(ctx);
+            return occurred(ctx, BLOOM_KEY);
         });
         register(Element.ElementType.HYDRO, Element.ElementType.QUICKEN, ctx -> {
-            consumeBoth(ctx);
-            return ReactionOutcome.REACTION_OCCURRED;
+            applyBloom(ctx);
+            return occurred(ctx, BLOOM_KEY);
         });
 
         register(Element.ElementType.PYRO, Element.ElementType.HYDRO, ctx -> {
             consumeAuraByTrigger(ctx, WEAK_MUL);
-            return amplified(ctx, false);
+            return amplified(ctx, false, VAPORIZE_KEY);
         });
         register(Element.ElementType.PYRO, Element.ElementType.ELECTRO, ctx -> {
-            consumeBoth(ctx);
+            consumeAuraByTrigger(ctx, 1.0);
             Reaction.create(Reaction.ReactionType.OVERLOAD, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger()).apply();
-            return ReactionOutcome.REACTION_OCCURRED;
+            return occurred(ctx, OVERLOAD_KEY);
         });
         register(Element.ElementType.PYRO, Element.ElementType.CRYO, ctx -> {
             consumeAuraByTrigger(ctx, STRONG_MUL);
-            return amplified(ctx, true);
+            return amplified(ctx, true, MELT_KEY);
         });
         register(Element.ElementType.PYRO, Element.ElementType.FROZEN, ctx -> {
             consumeAuraByTrigger(ctx, STRONG_MUL);
-            return amplified(ctx, true);
+            return amplified(ctx, true, MELT_KEY);
         });
         register(Element.ElementType.PYRO, Element.ElementType.DENDRO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            consumeBoth(ctx);
-            registerCombustion(ctx);
-            return ReactionOutcome.REACTION_OCCURRED;
+            Element triggerAttachment = ctx.ownerContainer().addIncomingElement(ctx.trigger());
+            registerCombustion(ctx, triggerAttachment);
+            consumeTrigger(ctx);
+            return occurred(ctx, COMBUSTION_KEY);
         });
 
         register(Element.ElementType.ELECTRO, Element.ElementType.PYRO, ctx -> {
@@ -82,48 +91,42 @@ public final class ReactionTable {
             ctx.trigger().subGauge(used);
             ctx.ownerContainer().removeAuraElement(ctx.aura());
             Reaction.create(Reaction.ReactionType.OVERLOAD, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger()).apply();
-            return ReactionOutcome.REACTION_OCCURRED;
+            return occurred(ctx, OVERLOAD_KEY);
         });
         register(Element.ElementType.ELECTRO, Element.ElementType.HYDRO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            consumeBoth(ctx);
-            registerElectroCharged(ctx);
-            return ReactionOutcome.REACTION_OCCURRED;
+            Element triggerAttachment = ctx.ownerContainer().addIncomingElement(ctx.trigger());
+            registerElectroCharged(ctx, triggerAttachment);
+            consumeTrigger(ctx);
+            return occurred(ctx, ELECTRO_CHARGED_KEY);
         });
         register(Element.ElementType.ELECTRO, Element.ElementType.CRYO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            consumeBoth(ctx);
-            Reaction.create(Reaction.ReactionType.SUPERCONDUCT, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger()).apply();
-            return ReactionOutcome.REACTION_OCCURRED;
+            applySuperconduct(ctx);
+            return occurred(ctx, SUPERCONDUCT_KEY);
         });
         register(Element.ElementType.ELECTRO, Element.ElementType.FROZEN, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            consumeBoth(ctx);
-            Reaction.create(Reaction.ReactionType.SUPERCONDUCT, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger()).apply();
-            return ReactionOutcome.REACTION_OCCURRED;
+            applySuperconduct(ctx);
+            return occurred(ctx, SUPERCONDUCT_KEY);
         });
         register(Element.ElementType.ELECTRO, Element.ElementType.DENDRO, ctx -> {
             ctx.ownerContainer().addIncomingElement(ctx.trigger());
             applyCatalyze(ctx);
             Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
-            return ReactionOutcome.REACTION_OCCURRED;
+            return occurred(ctx, QUICKEN_KEY);
         });
         register(Element.ElementType.ELECTRO, Element.ElementType.QUICKEN, ctx ->
-                catalyzeAdditive(ctx, AGGRAVATE_MUL, "Aggravate", Element.ElementType.ELECTRO, true));
+                catalyzeAdditive(ctx, AGGRAVATE_MUL, "Aggravate", AGGRAVATE_KEY, true));
 
         register(Element.ElementType.CRYO, Element.ElementType.HYDRO, ctx -> {
             freeze(ctx);
-            return ReactionOutcome.REACTION_OCCURRED;
+            return occurred(ctx, FREEZE_KEY);
         });
         register(Element.ElementType.CRYO, Element.ElementType.PYRO, ctx -> {
             consumeAuraByTrigger(ctx, WEAK_MUL);
-            return amplified(ctx, false);
+            return amplified(ctx, false, MELT_KEY);
         });
         register(Element.ElementType.CRYO, Element.ElementType.ELECTRO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            consumeBoth(ctx);
-            Reaction.create(Reaction.ReactionType.SUPERCONDUCT, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger()).apply();
-            return ReactionOutcome.REACTION_OCCURRED;
+            applySuperconduct(ctx);
+            return occurred(ctx, SUPERCONDUCT_KEY);
         });
         register(Element.ElementType.CRYO, Element.ElementType.DENDRO, ctx -> {
             ctx.ownerContainer().addIncomingElement(ctx.trigger());
@@ -131,24 +134,23 @@ public final class ReactionTable {
         });
 
         register(Element.ElementType.DENDRO, Element.ElementType.HYDRO, ctx -> {
-            consumeBoth(ctx);
-            Reaction.create(Reaction.ReactionType.BLOOM, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
-            return ReactionOutcome.REACTION_OCCURRED;
+            applyBloom(ctx);
+            return occurred(ctx, BLOOM_KEY);
         });
         register(Element.ElementType.DENDRO, Element.ElementType.PYRO, ctx -> {
-            ctx.ownerContainer().addIncomingElement(ctx.trigger());
-            consumeBoth(ctx);
-            registerCombustion(ctx);
-            return ReactionOutcome.REACTION_OCCURRED;
+            Element triggerAttachment = ctx.ownerContainer().addIncomingElement(ctx.trigger());
+            registerCombustion(ctx, triggerAttachment);
+            consumeTrigger(ctx);
+            return occurred(ctx, COMBUSTION_KEY);
         });
         register(Element.ElementType.DENDRO, Element.ElementType.ELECTRO, ctx -> {
             ctx.ownerContainer().addIncomingElement(ctx.trigger());
             applyCatalyze(ctx);
             Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
-            return ReactionOutcome.REACTION_OCCURRED;
+            return occurred(ctx, QUICKEN_KEY);
         });
         register(Element.ElementType.DENDRO, Element.ElementType.QUICKEN, ctx ->
-                catalyzeAdditive(ctx, SPREAD_MUL, "Spread", Element.ElementType.DENDRO, false));
+                catalyzeAdditive(ctx, SPREAD_MUL, "Spread", SPREAD_KEY, false));
 
         register(Element.ElementType.ANEMO, Element.ElementType.PYRO, swirl());
         register(Element.ElementType.ANEMO, Element.ElementType.HYDRO, swirl());
@@ -177,53 +179,86 @@ public final class ReactionTable {
         TABLE.computeIfAbsent(trigger, t -> new HashMap<>()).put(aura, handler);
     }
 
-    private static ReactionOutcome.Amplified amplified(ReactionContext ctx, boolean strong) {
+    private static ReactionOutcome.Amplified amplified(ReactionContext ctx, boolean strong, String translationKey) {
         double masteryMul = ctx.attackerContainer() != null
                 ? AmpReaction.getMasteryAmp(ctx.attackerContainer().getMastery())
                 : 1.0;
-        return strong ? ReactionOutcome.Amplified.strong(masteryMul) : ReactionOutcome.Amplified.weak(masteryMul);
+        ReactionOutcome.Feedback feedback = feedback(ctx, translationKey);
+        return strong
+                ? ReactionOutcome.Amplified.strong(masteryMul, feedback)
+                : ReactionOutcome.Amplified.weak(masteryMul, feedback);
     }
 
-    private static void registerElectroCharged(ReactionContext ctx) {
+    private static ReactionOutcome.ReactionOccurred occurred(ReactionContext ctx, String translationKey) {
+        return ReactionOutcome.occurred(translationKey, triggerType(ctx));
+    }
+
+    private static ReactionOutcome.Feedback feedback(ReactionContext ctx, String translationKey) {
+        return new ReactionOutcome.Feedback(translationKey, triggerType(ctx));
+    }
+
+    private static Element.ElementType triggerType(ReactionContext ctx) {
+        Element.ElementType triggerType = Element.typeOfElementClass(ctx.trigger().getClass());
+        return triggerType == null ? Element.ElementType.PHYSICS : triggerType;
+    }
+
+    private static void registerElectroCharged(ReactionContext ctx, Element triggerAttachment) {
         ElementContainer container = ctx.ownerContainer();
         HashMap<Class<? extends Reaction>, Reaction> reactions = container.ensureReactionsMap();
         if (reactions.containsKey(ElectroCharged.class)) {
             return;
         }
+        Element reactionTrigger = triggerAttachment != null ? triggerAttachment : ctx.trigger();
         Reaction reaction = Reaction.create(
-                Reaction.ReactionType.ELECTRO_CHARGED, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
+                Reaction.ReactionType.ELECTRO_CHARGED, ctx.owner(), ctx.source(), ctx.aura(), reactionTrigger);
         reactions.put(ElectroCharged.class, reaction);
         container.markElectroCharged();
     }
 
-    private static void registerCombustion(ReactionContext ctx) {
+    private static void registerCombustion(ReactionContext ctx, Element triggerAttachment) {
         ElementContainer container = ctx.ownerContainer();
         HashMap<Class<? extends Reaction>, Reaction> reactions = container.ensureReactionsMap();
         if (reactions.containsKey(Combustion.class)) {
             return;
         }
+        Element reactionTrigger = triggerAttachment != null ? triggerAttachment : ctx.trigger();
         Reaction reaction = Reaction.create(
-                Reaction.ReactionType.COMBUSTION, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
+                Reaction.ReactionType.COMBUSTION, ctx.owner(), ctx.source(), ctx.aura(), reactionTrigger);
         reactions.put(Combustion.class, reaction);
         container.markCombustion();
     }
 
     private static void applyCatalyze(ReactionContext ctx) {
-        double used = consumeBoth(ctx);
+        double used = Math.min(ctx.trigger().getGauge(), ctx.aura().getGauge());
+        ctx.trigger().subGauge(used);
+        ctx.aura().subGauge(used);
         if (used <= 0) {
             return;
         }
         Object sourceEntity = ctx.source() != null ? ctx.source().getSource() : ctx.owner();
         ctx.ownerContainer().addCatalyzeElement(new Catalyze(
                 used, ctx.owner(), ctx.attacker(), (net.minecraft.entity.Entity) sourceEntity));
-        spawnReactionLabel(ctx, "Quicken", Element.ElementType.QUICKEN);
+    }
+
+    private static void applySuperconduct(ReactionContext ctx) {
+        double used = Math.min(ctx.trigger().getGauge(), ctx.aura().getGauge());
+        if (used <= 0) {
+            return;
+        }
+        ctx.trigger().subGauge(used);
+        ctx.aura().subGauge(used);
+        if (ctx.trigger().getGauge() > 0) {
+            ctx.ownerContainer().addIncomingElement(ctx.trigger());
+            consumeTrigger(ctx);
+        }
+        Reaction.create(Reaction.ReactionType.SUPERCONDUCT, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger()).apply();
     }
 
     private static ReactionOutcome.Additive catalyzeAdditive(
             ReactionContext ctx,
             double reactionCoefficient,
             String label,
-            Element.ElementType feedbackColor,
+            String translationKey,
             boolean attachTrigger
     ) {
         if (attachTrigger) {
@@ -231,11 +266,11 @@ public final class ReactionTable {
         }
         ctx.trigger().subGauge(ctx.trigger().getGauge());
         Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
-        spawnReactionLabel(ctx, label, feedbackColor);
         return new ReactionOutcome.Additive(
                 Reaction.ReactionType.CATALYZE,
                 label,
-                catalyzeBonusDamage(ctx, reactionCoefficient)
+                catalyzeBonusDamage(ctx, reactionCoefficient),
+                feedback(ctx, translationKey)
         );
     }
 
@@ -246,37 +281,30 @@ public final class ReactionTable {
                 * (1.0 + (5.0 * mastery) / (mastery + 1200.0));
     }
 
-    private static void spawnReactionLabel(
-            ReactionContext ctx,
-            String label,
-            Element.ElementType feedbackColor
-    ) {
-        FloatingTextService.spawnAroundEntity(
-                ctx.owner(),
-                label,
-                ElementColors.colorFor(feedbackColor),
-                FloatingTextService.DEFAULT_LIFETIME_TICKS,
-                new Vec3d(0.0D, ctx.owner().getHeight() + 0.7D, 0.0D),
-                new Vec3d(0.0D, 0.035D, 0.0D)
-        );
-    }
-
     public static double freezeFormula(double triggerGauge, double auraGauge) {
         return Math.min(triggerGauge, auraGauge) * 2;
     }
 
     private static void freeze(ReactionContext ctx) {
-        double used = consumeBoth(ctx);
-        if (used > 0) {
-            ctx.ownerContainer().addFrozenElement(new Frozen(used * 2));
+        double frozenGauge = freezeFormula(ctx.trigger().getGauge(), ctx.aura().getGauge());
+        if (frozenGauge <= 0) {
+            return;
         }
+        double used = frozenGauge / 2.0;
+        ctx.trigger().subGauge(used);
+        ctx.aura().subGauge(used);
+        ctx.ownerContainer().addFrozenElement(new Frozen(frozenGauge));
     }
 
-    private static double consumeBoth(ReactionContext ctx) {
+    private static void applyBloom(ReactionContext ctx) {
         double used = Math.min(ctx.trigger().getGauge(), ctx.aura().getGauge());
         ctx.trigger().subGauge(used);
         ctx.aura().subGauge(used);
-        return used;
+        Reaction.create(Reaction.ReactionType.BLOOM, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
+    }
+
+    private static void consumeTrigger(ReactionContext ctx) {
+        ctx.trigger().subGauge(ctx.trigger().getGauge());
     }
 
     private static double consumeAuraByTrigger(ReactionContext ctx, double auraPerTrigger) {
@@ -291,17 +319,17 @@ public final class ReactionTable {
 
     private static ReactionHandler swirl() {
         return ctx -> {
-            consumeBoth(ctx);
             Reaction.create(Reaction.ReactionType.SWIRL, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger()).apply();
-            return ReactionOutcome.REACTION_OCCURRED;
+            consumeTrigger(ctx);
+            return occurred(ctx, SWIRL_KEY);
         };
     }
 
     private static ReactionHandler crystallize() {
         return ctx -> {
-            consumeBoth(ctx);
             Reaction.create(Reaction.ReactionType.CRYSTALLIZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
-            return ReactionOutcome.REACTION_OCCURRED;
+            consumeTrigger(ctx);
+            return occurred(ctx, CRYSTALLIZE_KEY);
         };
     }
 }

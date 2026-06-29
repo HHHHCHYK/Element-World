@@ -10,6 +10,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
@@ -41,7 +42,33 @@ public final class FloatingTextService {
                 (random.nextDouble() - 0.5D) * target.getWidth()
         );
         Vec3d velocity = new Vec3d(0.0D, 0.035D, 0.0D);
-        spawnAroundEntity(target, DAMAGE_FORMAT.format(amount), color, DEFAULT_LIFETIME_TICKS, offset, velocity);
+        spawnAroundEntity(
+                target,
+                Text.literal(DAMAGE_FORMAT.format(amount)),
+                color,
+                DEFAULT_LIFETIME_TICKS,
+                offset,
+                velocity
+        );
+    }
+
+    public static void spawnReactionLabel(
+            LivingEntity target,
+            Text text,
+            Element.ElementType triggerElementType
+    ) {
+        if (target.getWorld().isClient()) {
+            return;
+        }
+
+        spawnAroundEntity(
+                target,
+                text,
+                ElementColors.colorFor(triggerElementType),
+                DEFAULT_LIFETIME_TICKS,
+                new Vec3d(0.0D, target.getHeight() + 0.7D, 0.0D),
+                new Vec3d(0.0D, 0.035D, 0.0D)
+        );
     }
 
     public static void spawnAroundEntity(
@@ -52,7 +79,18 @@ public final class FloatingTextService {
             Vec3d offset,
             Vec3d velocity
     ) {
-        if (entity.getWorld().isClient() || lifetime <= 0 || text.isEmpty()) {
+        spawnAroundEntity(entity, Text.literal(text), color, lifetime, offset, velocity);
+    }
+
+    public static void spawnAroundEntity(
+            LivingEntity entity,
+            Text text,
+            int color,
+            int lifetime,
+            Vec3d offset,
+            Vec3d velocity
+    ) {
+        if (entity.getWorld().isClient() || lifetime <= 0 || text.getString().isEmpty()) {
             return;
         }
 
@@ -68,7 +106,18 @@ public final class FloatingTextService {
             int lifetime,
             Vec3d velocity
     ) {
-        if (lifetime <= 0 || text.isEmpty()) {
+        spawnAt(world, position, Text.literal(text), color, lifetime, velocity);
+    }
+
+    public static void spawnAt(
+            ServerWorld world,
+            Vec3d position,
+            Text text,
+            int color,
+            int lifetime,
+            Vec3d velocity
+    ) {
+        if (lifetime <= 0 || text.getString().isEmpty()) {
             return;
         }
 
@@ -80,7 +129,7 @@ public final class FloatingTextService {
     private static void sendToTrackingPlayers(
             LivingEntity entity,
             Vec3d position,
-            String text,
+            Text text,
             int color,
             int lifetime,
             Vec3d velocity
@@ -98,7 +147,7 @@ public final class FloatingTextService {
     private static void send(
             ServerPlayerEntity player,
             Vec3d position,
-            String text,
+            Text text,
             int color,
             int lifetime,
             Vec3d velocity
@@ -107,7 +156,7 @@ public final class FloatingTextService {
         buf.writeDouble(position.x);
         buf.writeDouble(position.y);
         buf.writeDouble(position.z);
-        buf.writeString(text);
+        buf.writeText(text);
         buf.writeInt(color);
         buf.writeInt(lifetime);
         buf.writeDouble(velocity.x);

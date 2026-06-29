@@ -310,17 +310,20 @@ public class ElementContainer {
     private方法
      */
     // Element attachment with attach decay.
-    private void addElement(Element element){
+    private Element addElement(Element element){
         Element existing = findElement(element.getClass());
         double attachedGauge = element.getGauge() * ReactionTable.ATTACH_DECAY;
         if (existing != null) {
             existing.setGauge(Math.max(existing.getGauge(), attachedGauge));
+            rebuildElementState();
+            return existing;
         } else {
             element.setGauge(attachedGauge);
             element.setOwner(owner);
             elements.add(element);
+            rebuildElementState();
+            return element;
         }
-        rebuildElementState();
     }
 
     // Remove an attached element.
@@ -380,14 +383,19 @@ public class ElementContainer {
         if (current == ReactionOutcome.NONE) {
             return next;
         }
+        if (current.feedback() == null && next.feedback() != null) {
+            return next;
+        }
         return current;
     }
 
-    public void addIncomingElement(Element element){
+    @Nullable
+    public Element addIncomingElement(Element element){
         Element copy = copyElement(element);
         if (copy != null) {
-            addElement(copy);
+            return addElement(copy);
         }
+        return null;
     }
     /**
      * 移除附着元素（供 Electro×Pyro 超载的不对称「移除 aura」行为调用）。

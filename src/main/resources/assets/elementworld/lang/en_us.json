@@ -12,5 +12,21 @@
   "enchantment.elementworld.geo_infusion": "Geo Infusion",
   "enchantment.elementworld.hydro_infusion": "Hydro Infusion",
   "enchantment.elementworld.pyro_infusion": "Pyro Infusion",
-  "item.elementworld.gui_stick.used": "GUI stick used"
+  "item.elementworld.gui_stick.used": "GUI stick used",
+  "reaction.elementworld.aggravate": "Aggravate",
+  "reaction.elementworld.bloom": "Bloom",
+  "reaction.elementworld.burgeon": "Burgeon",
+  "reaction.elementworld.combustion": "Burning",
+  "reaction.elementworld.crystallize": "Crystallize",
+  "reaction.elementworld.electro_charged": "Electro-Charged",
+  "reaction.elementworld.freeze": "Freeze",
+  "reaction.elementworld.hyperbloom": "Hyperbloom",
+  "reaction.elementworld.melt": "Melt",
+  "reaction.elementworld.overload": "Overload",
+  "reaction.elementworld.quicken": "Quicken",
+  "reaction.elementworld.shatter": "Shatter",
+  "reaction.elementworld.spread": "Spread",
+  "reaction.elementworld.superconduct": "Superconduct",
+  "reaction.elementworld.swirl": "Swirl",
+  "reaction.elementworld.vaporize": "Vaporize"
 }

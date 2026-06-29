@@ -5,6 +5,7 @@ import com.elementworld.elementComponents.reaction.ReactionOutcome;
 import com.elementworld.elements.EP;
 import com.elementworld.elements.Element;
 import com.elementworld.elements.Physics;
+import com.elementworld.environment.EnvironmentElementService;
 import com.elementworld.floatingtext.FloatingTextService;
 import com.elementworld.interfaces.DamageSourceHolder;
 import com.elementworld.interfaces.LivingEntityHolder;
@@ -14,6 +15,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -56,6 +58,7 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
             elementContainer = new ElementContainer((LivingEntity) (Object) this);
         }
         this.elementContainer.tick();
+        EnvironmentElementService.tick((LivingEntity) (Object) this, this.elementContainer);
     }
 
     @Unique
@@ -93,6 +96,7 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
         DamageSource source = args.get(0);
         float amount = args.get(1);
         LivingEntity thisLivingEntity = (LivingEntity) (Object) this; // 获取当前生物的实例
+        ReactionOutcome reactionOutcome = ReactionOutcome.NONE;
 
         if (amount <= 0) {
             return;
@@ -130,9 +134,9 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                             }
 
                             // 结算反应副作用并获取结果（resolveReaction 内部处理 cannotApply 跳过）
-                            ReactionOutcome outcome = ownContainer.resolveReaction(element, attacker, source);
+                            reactionOutcome = ownContainer.resolveReaction(element, attacker, source);
 
-                            if (outcome instanceof ReactionOutcome.Amplified amp) {
+                            if (reactionOutcome instanceof ReactionOutcome.Amplified amp) {
                                 // 增幅反应（蒸发 / 融化）：amount *= 倍率 × 精通 × 增伤 × 减抗
                                 amount = (float) (amount * amp.multiplier());
                                 if (attackerContainer != null) {
@@ -141,7 +145,7 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                                 }
                                 amount = (float) (amount * (1 - ownContainer.getResistanceValue(elementType)));
                             } else {
-                                if (outcome instanceof ReactionOutcome.Additive additive) {
+                                if (reactionOutcome instanceof ReactionOutcome.Additive additive) {
                                     amount = (float) (amount + additive.bonusDamage());
                                 }
                                 // NONE / REACTION_OCCURRED：有元素但非增幅（含 cannotApply 二级伤害）
@@ -186,6 +190,14 @@ public abstract class LivingEntityMixin implements LivingEntityHolder {
                     ? damageHolder.getElement$EW()
                     : null;
             FloatingTextService.spawnDamageNumber(thisLivingEntity, amount, damageElement);
+        }
+        ReactionOutcome.Feedback feedback = reactionOutcome.feedback();
+        if (feedback != null) {
+            FloatingTextService.spawnReactionLabel(
+                    thisLivingEntity,
+                    Text.translatable(feedback.translationKey()),
+                    feedback.triggerElementType()
+            );
         }
         args.set(1, amount);
     }

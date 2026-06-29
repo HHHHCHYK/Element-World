@@ -12,5 +12,21 @@
   "enchantment.elementworld.geo_infusion": "\u5ca9\u5143\u7d20\u9644\u9b54",
   "enchantment.elementworld.hydro_infusion": "\u6c34\u5143\u7d20\u9644\u9b54",
   "enchantment.elementworld.pyro_infusion": "\u706b\u5143\u7d20\u9644\u9b54",
-  "item.elementworld.gui_stick.used": "GUI \u6728\u68cd\u5df2\u4f7f\u7528"
+  "item.elementworld.gui_stick.used": "GUI \u6728\u68cd\u5df2\u4f7f\u7528",
+  "reaction.elementworld.aggravate": "\u8d85\u6fc0\u5316",
+  "reaction.elementworld.bloom": "\u7efd\u653e",
+  "reaction.elementworld.burgeon": "\u70c8\u7efd\u653e",
+  "reaction.elementworld.combustion": "\u71c3\u70e7",
+  "reaction.elementworld.crystallize": "\u7ed3\u6676",
+  "reaction.elementworld.electro_charged": "\u611f\u7535",
+  "reaction.elementworld.freeze": "\u51bb\u7ed3",
+  "reaction.elementworld.hyperbloom": "\u8d85\u7efd\u653e",
+  "reaction.elementworld.melt": "\u878d\u5316",
+  "reaction.elementworld.overload": "\u8d85\u8f7d",
+  "reaction.elementworld.quicken": "\u539f\u6fc0\u5316",
+  "reaction.elementworld.shatter": "\u788e\u51b0",
+  "reaction.elementworld.spread": "\u8513\u6fc0\u5316",
+  "reaction.elementworld.superconduct": "\u8d85\u5bfc",
+  "reaction.elementworld.swirl": "\u6269\u6563",
+  "reaction.elementworld.vaporize": "\u84b8\u53d1"
 }
