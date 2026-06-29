@@ -34,7 +34,6 @@ public final class ElementReactionPriority {
                 Element.ElementType.DENDRO
         ));
         PRIORITIES.put(Element.ElementType.ELECTRO, List.of(
-                Element.ElementType.QUICKEN,
                 Element.ElementType.PYRO,
                 Element.ElementType.HYDRO,
                 Element.ElementType.FROZEN,
@@ -47,7 +46,6 @@ public final class ElementReactionPriority {
                 Element.ElementType.ELECTRO
         ));
         PRIORITIES.put(Element.ElementType.DENDRO, List.of(
-                Element.ElementType.QUICKEN,
                 Element.ElementType.HYDRO,
                 Element.ElementType.PYRO,
                 Element.ElementType.ELECTRO

@@ -22,14 +22,16 @@ aura 选择不会因为 `ReactionTable` 中没有对应反应而跳过该元素�
 ```text
 HYDRO:    PYRO, CRYO, FROZEN, ELECTRO, QUICKEN, DENDRO
 PYRO:     FROZEN, CRYO, HYDRO, ELECTRO, QUICKEN, DENDRO
-ELECTRO:  QUICKEN, PYRO, HYDRO, FROZEN, CRYO, DENDRO
+ELECTRO:  PYRO, HYDRO, FROZEN, CRYO, DENDRO
 CRYO:     HYDRO, PYRO, ELECTRO
-DENDRO:   QUICKEN, HYDRO, PYRO, ELECTRO
+DENDRO:   HYDRO, PYRO, ELECTRO
 ANEMO:    PYRO, HYDRO, ELECTRO, CRYO, FROZEN
 GEO:      PYRO, HYDRO, ELECTRO, CRYO, FROZEN
 ```
 
-超激化、蔓激化属于不消耗元素的反应。触发后，本次轮询会把对应激元素标记为已处理，避免同一次攻击重复触发同一个激化派生反应。
+超激化、蔓激化不走 `ReactionTable` 普通轮询。雷 / 草元素命中时会先检查目标在本次命中前是否已经存在 `Catalyze`，若存在则先结算对应的超激化 / 蔓激化加成，然后再进入普通元素反应轮询。
+
+`Catalyze` 在普通轮询中会被雷 / 草触发元素忽略，因此 `Electro + QUICKEN` 和 `DENDRO + QUICKEN` 不再作为 `ReactionTable` 条目。由本次雷草反应新生成的 `Catalyze` 不会在同一次命中中立刻触发超激化或蔓激化。
 
 ## 元素附着衰减
 
@@ -152,8 +154,8 @@ GEO:      PYRO, HYDRO, ELECTRO, CRYO, FROZEN
 
 - `Hydro + Quicken` 按 `Hydro + Dendro` 的绽放路径处理。
 - `Pyro + Quicken` 按 `Pyro + Dendro` 的燃烧路径处理。
-- `Electro + Quicken` 只触发超激化，不消耗元素。
-- `Dendro + Quicken` 只触发蔓激化，不消耗元素。
+- `Electro + Quicken` 不进入普通 `ReactionTable` 查询；若目标在命中前已有 Quicken，则在普通轮询前触发超激化加成。
+- `Dendro + Quicken` 不进入普通 `ReactionTable` 查询；若目标在命中前已有 Quicken，则在普通轮询前触发蔓激化加成。
 - `Cryo + Quicken` 不反应。
 - `Anemo / Geo` 不扩散或结晶草系状态。
 

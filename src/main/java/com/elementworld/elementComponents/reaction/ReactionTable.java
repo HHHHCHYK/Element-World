@@ -110,8 +110,6 @@ public final class ReactionTable {
             Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
             return occurred(ctx, QUICKEN_KEY);
         });
-        register(Element.ElementType.ELECTRO, Element.ElementType.QUICKEN, ctx ->
-                catalyzeAdditive(ctx, AGGRAVATE_MUL, "Aggravate", AGGRAVATE_KEY));
 
         register(Element.ElementType.CRYO, Element.ElementType.HYDRO, ctx -> {
             freeze(ctx);
@@ -141,8 +139,6 @@ public final class ReactionTable {
             Reaction.create(Reaction.ReactionType.CATALYZE, ctx.owner(), ctx.source(), ctx.aura(), ctx.trigger());
             return occurred(ctx, QUICKEN_KEY);
         });
-        register(Element.ElementType.DENDRO, Element.ElementType.QUICKEN, ctx ->
-                catalyzeAdditive(ctx, SPREAD_MUL, "Spread", SPREAD_KEY));
 
         register(Element.ElementType.ANEMO, Element.ElementType.PYRO, swirl());
         register(Element.ElementType.ANEMO, Element.ElementType.HYDRO, swirl());
@@ -173,8 +169,15 @@ public final class ReactionTable {
     }
 
     public static boolean isNonConsuming(Element.ElementType trigger, Element.ElementType aura) {
-        return (trigger == Element.ElementType.ELECTRO || trigger == Element.ElementType.DENDRO)
-                && aura == Element.ElementType.QUICKEN;
+        return false;
+    }
+
+    public static ReactionOutcome applyAggravate(ReactionContext ctx) {
+        return catalyzeAdditive(ctx, AGGRAVATE_MUL, "Aggravate", AGGRAVATE_KEY);
+    }
+
+    public static ReactionOutcome applySpread(ReactionContext ctx) {
+        return catalyzeAdditive(ctx, SPREAD_MUL, "Spread", SPREAD_KEY);
     }
 
     private static void register(Element.ElementType trigger, Element.ElementType aura, ReactionHandler handler) {

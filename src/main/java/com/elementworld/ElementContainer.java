@@ -247,6 +247,18 @@ public class ElementContainer {
         }
 
         ReactionOutcome finalOutcome = ReactionOutcome.NONE;
+        Element catalyzeBeforeReaction = findElement(Catalyze.class);
+        if (catalyzeBeforeReaction != null && catalyzeBeforeReaction.getGauge() > 0) {
+            ReactionContext ctx = new ReactionContext(
+                    element, catalyzeBeforeReaction, owner, attacker, damageSource,
+                    this, attackerElementContainer, finalOutcome);
+            if (triggerType == Element.ElementType.ELECTRO) {
+                finalOutcome = ReactionTable.applyAggravate(ctx);
+            } else if (triggerType == Element.ElementType.DENDRO) {
+                finalOutcome = ReactionTable.applySpread(ctx);
+            }
+        }
+
         boolean ordinaryReacted = false;
         Set<Element> handledAuras = Collections.newSetFromMap(new IdentityHashMap<>());
 
